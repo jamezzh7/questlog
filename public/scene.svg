@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 200" shape-rendering="crispEdges">
+ <defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="2" height="2" fill="#d6ddc6" opacity=".45"/></pattern></defs>
+ <style>@media(prefers-reduced-motion:no-preference){#builder{animation:build 3.2s ease-in-out infinite}@keyframes build{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}}</style>
+ <path fill="#e9eedc" d="M0 0h680v200H0z"/><path fill="url(#dots)" d="M0 0h680v200H0z"/>
+ <g fill="#f7f8ed"><path d="M45 39h18V29h33v10h17v13H45zm420-9h16V19h28v11h21v13h-65zM267 22h11V13h24v9h15v11h-50z"/></g>
+ <g fill="#d4dfbe"><path d="M0 139h36v-19h23v-16h33v16h27v14h38v-30h20V88h34v16h20v32h55v-17h34V98h25v21h19v18h51v-26h24V93h27v18h28v24h51v-18h27v-15h31v15h26v15h51v-20h38V96h30v16h23v25h30v63H0z"/></g>
+ <g fill="#a7bc88"><path d="M20 142v-28h-8v-13h8V90h12v11h8v13h-8v28zm105 0v-20h-8v-13h8V98h11v11h8v13h-8v20zm325 0v-28h-8v-13h8V90h12v11h8v13h-8v28z"/></g>
+ <path fill="#364d35" d="M32 150h607v10h-8v22h-15v9H61v-9H42v-22H32z"/><path fill="#9ab66d" d="M35 143h601v17H35z"/><path fill="#b8ce88" d="M35 143h601v7H35z"/><path fill="#7f9b5a" d="M43 160h584v16H43z"/><path fill="#a3ad80" d="M58 176h556v8H58z"/>
+ <g fill="#d5d4ac"><path d="M94 148h48v5H94zm93 0h43v5h-43zm86 0h48v5h-48zm92 0h43v5h-43zm87 0h48v5h-48z"/></g>
+ <g fill="#536c3c"><path d="M62 143v-9h4v5h5v-8h4v12zm119 0v-8h4v4h5v-7h4v11zm255 0v-9h4v5h5v-8h4v12zm169 0v-9h4v5h5v-8h4v12z"/></g>
+ <g fill="#e5b85b"><path d="M82 135h4v4h-4zm117-5h4v4h-4zm220 1h4v4h-4zm177 4h4v4h-4z"/></g>
+ <!-- completed checkpoint -->
+ <path fill="#394c34" d="M90 86h5v57h-5z"/><path fill="#809f53" d="M95 88h32v21H95z"/><path fill="#e9efcf" d="M102 97h4v4h4v-8h4v12h-12z"/>
+ <!-- next blocks under construction -->
+ <path fill="#4f6040" d="M359 121h25v25h-25zm29-16h25v41h-25z"/><path fill="#c9be86" d="M362 124h19v18h-19zm29-16h19v34h-19z"/><path fill="#e3d7a2" d="M362 124h19v5h-19zm29-16h19v5h-19z"/><path fill="#9b9466" d="M370 134h5v8h-5zm29-13h5v21h-5z"/>
+ <!-- little builder -->
+ <ellipse fill="#72924c" cx="310" cy="148" rx="31" ry="4"/>
+ <g id="builder"><g stroke="#334330" stroke-width="4"><path fill="#aeca76" d="M287 99h43v35h-43z"/><path fill="#d8e6b2" d="M281 65h53v43h-53z"/><path fill="#eff2d6" d="M288 72h39v26h-39z"/><path fill="#aeca76" d="M282 111h-9v17h13m45-17h10v-15h10v-9h-15v21h-5M293 134v10h10v-10m11 0v10h10v-10"/><path fill="#e3b85c" d="M299 57h17v8h-17z"/></g>
+ <path fill="#334330" d="M296 79h6v9h-6zm17 0h6v9h-6zm-11 15h11v3h-11z"/>
+ <path fill="#45573b" d="M345 76h5v22h-5z"/><path fill="#9a9f87" d="M339 74h19v9h-19z"/><path fill="#d6d5b4" d="M339 74h19v3h-19z"/></g>
+ <!-- castle finish -->
+ <path fill="#556849" d="M520 101h57v44h-57zm-12-31h22v75h-22zm60 0h22v75h-22z"/><path fill="#d1d6b6" d="M524 104h50v37h-50zm-12-29h14v66h-14zm60 0h14v66h-14z"/><path fill="#556849" d="M508 62h7v13h-7zm15 0h7v13h-7zm45 0h7v13h-7zm15 0h7v13h-7zM540 123h17v22h-17zM516 84h6v10h-6zm60 0h6v10h-6z"/><path fill="#e6e7ce" d="M512 76h14v5h-14zm60 0h14v5h-14zm-48 29h50v6h-50z"/>
+ <path fill="#556849" d="M548 42h4v61h-4z"/><path fill="#e5b85b" d="M552 43h30v18h-30z"/><path fill="#f6e3a0" d="M556 47h22v4h-22z"/>
+</svg>

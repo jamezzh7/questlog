@@ -1,0 +1,139 @@
+"use strict";
+(() => {
+  const strings = {
+    moduleTasks: ["模块任务", "Module tasks", "Tâches des modules"], moduleCount: ["{count} 个功能模块", "{count} modules", "{count} modules"], workTaskCount: ["{count} 项任务", "{count} tasks", "{count} tâches"],
+    moduleCountOne: ["{count} 个功能模块", "{count} module", "{count} module"], workTaskCountOne: ["{count} 项任务", "{count} task", "{count} tâche"],
+    workStructure: ["工作结构", "Work structure", "Organisation du travail"], currentModule: ["当前模块", "Current module", "Module en cours"], currentGroup: ["当前分组", "Current group", "Groupe en cours"],
+    plannedNext: ["计划可推进", "Ready in plan", "Prêt à démarrer"], activeTask: ["进行中任务", "Active task", "Tâche en cours"], noReadyTask: ["台账尚未标注进行中或可开始的任务。", "No task is marked in progress or ready in the plan.", "Aucune tâche n’est indiquée comme en cours ou prête à démarrer dans le plan."],
+    moduleScope: ["按台账原文状态展示；模块任务不自动完成主验收项。", "States follow the work plan. Module tasks do not automatically complete main acceptance items.", "Les états reprennent le plan d’origine. Les tâches des modules ne valident pas automatiquement la liste principale."],
+    moduleMethod: ["主清单独立计数；模块按任务原文状态展示，不推算模块百分比，也不将计划可开始当作正在进行。", "The main checklist is counted independently. Module states follow the source; no module percentage is inferred, and ready tasks are not treated as active.", "La liste principale est comptée séparément. Les états des modules suivent le document source, sans pourcentage déduit ; une tâche prête à démarrer n’est pas considérée comme en cours."],
+    noMainChecklist: ["未提供主验收清单", "No main checklist provided", "Aucune liste principale fournie"], taskNotes: ["任务说明", "Task details", "Détails de la tâche"],
+    workStatus_done: ["已交付", "Delivered", "Livrée"], workStatus_in_progress: ["进行中", "In progress", "En cours"], workStatus_ready: ["计划可开始", "Ready in plan", "Prête à démarrer"],
+    workStatus_blocked: ["有前置条件", "Prerequisites pending", "Prérequis en attente"], workStatus_deferred: ["暂缓", "Deferred", "Reportée"], workStatus_pending: ["状态未标注", "State unspecified", "État non précisé"],
+    settings: ["设置", "Settings", "Réglages"], resources: ["项目资料", "Project info", "Infos du projet"], backTasks: ["返回任务", "Back to tasks", "Retour aux tâches"],
+    collapse: ["收起", "Collapse", "Réduire"], readOnly: ["只读", "Read only", "Lecture seule"], viewScope: ["查看范围", "View checklist", "Liste à afficher"],
+    currentStage: ["当前", "Current", "En cours"], localHelp: ["仅在本机读取项目文件，不调用模型或上传内容。", "Reads project files on this Mac. No model calls or uploads.", "Lit les fichiers de projet sur ce Mac, sans appel à un modèle ni envoi de données."],
+    appTitle: ["Questlog · 项目进度伙伴", "Questlog · Project progress", "Questlog · Avancement du projet"],
+    home: ["Questlog 首页", "Questlog home", "Accueil Questlog"], progressTitle: ["项目进度", "Project progress", "Avancement du projet"],
+    expand: ["展开进度", "Open details", "Ouvrir les détails"], compact: ["收起为悬浮窗", "Back to widget", "Revenir à la mini-fenêtre"], quit: ["退出应用", "Quit Questlog", "Quitter Questlog"],
+    projects: ["项目", "Projects", "Projets"], projectList: ["项目列表", "Projects", "Liste des projets"], connectNew: ["连接新项目", "Connect project", "Connecter un projet"],
+    connectAction: ["连接新项目…", "Connect Project…", "Connecter un projet…"],
+    removeProject: ["移除项目", "Remove project", "Retirer le projet"], removeNamed: ["移除 {name} 的连接…", "Remove {name} connection…", "Retirer la connexion à {name}…"],
+    removeTitle: ["移除项目连接？", "Remove project connection?", "Retirer la connexion au projet ?"], removeName: ["将“{name}”从 Questlog 移除。", "Remove “{name}” from Questlog.", "Retirer « {name} » de Questlog."],
+    removeDescription: ["只移除本应用内的连接及工时等跟踪设置，项目目录和文件会保留。之后可以重新连接。", "This removes the connection and its tracking settings, including work estimates. Your project folder and files are kept. You can reconnect later.", "La connexion et ses réglages de suivi, dont les estimations de travail, seront retirés. Le dossier et les fichiers du projet sont conservés. Vous pourrez reconnecter le projet plus tard."],
+    cancel: ["取消", "Cancel", "Annuler"], projectRemoved: ["已移除 {name} 的连接", "Removed {name} connection", "Connexion à {name} retirée"], emptyTitle: ["连接你的第一个项目", "Connect your first project", "Connectez votre premier projet"],
+    local: ["本地运行", "Local only", "Sur ce Mac"], reading: ["正在读取项目任务…", "Reading project tasks…", "Lecture des tâches du projet…"], overview: ["进度概览", "Progress overview", "Vue d’ensemble"],
+    projectContext: ["项目近况", "Project notes", "Notes du projet"], contextHint: ["摘自项目文档 · 保留原文", "Project document excerpts · original text", "Extraits des documents du projet · texte d’origine"],
+    noContext: ["暂未发现项目说明或交接文档。可在项目根目录保存 README.md 或 PROJECT_HANDOFF.md。", "No project notes found. Add a README.md or PROJECT_HANDOFF.md in the project folder.", "Aucune note de projet trouvée. Ajoutez un fichier README.md ou PROJECT_HANDOFF.md dans le dossier du projet."],
+    readDocument: ["阅读原文", "Read document", "Lire le document"], documentReadOnly: ["只读预览 · 内容来自本机项目文件", "Read-only preview · from a local project file", "Aperçu en lecture seule · fichier local du projet"],
+    choosePlan: ["选择任务清单…", "Choose checklist…", "Choisir une liste…"], sourceHelp: ["选择要跟踪的 Markdown 任务文档，也可填写相对路径。切换后重新计算进度；每份清单的统计范围、依赖和工时分别保存。", "Select a Markdown checklist or enter its relative path. Progress follows the selected file. Each checklist keeps its own scope, dependencies and work estimates.", "Choisissez une liste de tâches Markdown ou saisissez son chemin relatif. L’avancement suit le fichier sélectionné. Chaque liste conserve son périmètre, ses dépendances et ses estimations de travail."],
+    planOptions: ["可用任务清单", "Available checklists", "Listes disponibles"], usePlan: ["使用这份清单", "Use this checklist", "Utiliser cette liste"], planSelected: ["已切换进度来源", "Progress source updated", "Source de l’avancement mise à jour"],
+    planCount: ["复选任务 {done}/{total} · 含阶段子项", "{done}/{total} checkboxes · includes stage items", "{done}/{total} cases cochées · sous-tâches d’étape incluses"],
+    noPlansFound: ["未自动发现清单。可以填写项目内已有文档的相对路径。", "No checklist detected. Enter the relative path of an existing document in this project.", "Aucune liste détectée. Saisissez le chemin relatif d’un document existant dans ce projet."],
+    autoPlan: ["留空自动识别", "Leave blank to detect automatically", "Laisser vide pour détecter automatiquement"],
+    viewStage: ["查看", "View", "Voir"], stageTasks: ["阶段任务", "Stage tasks", "Tâches de l’étape"],
+    mainScope: ["主验收项 · 用于计算整体进度", "Main acceptance items · used for overall progress", "Critères de validation principaux · calcul de l’avancement global"],
+    separateScope: ["本阶段单独统计，不重复计入整体进度", "This stage is counted separately from overall progress", "Cette étape est comptée séparément de l’avancement global"],
+    includedScope: ["本阶段任务已包含在整体清单中", "These stage tasks are included in the overall checklist", "Les tâches de cette étape figurent dans la liste globale"],
+    searchTasks: ["搜索任务", "Search tasks", "Rechercher des tâches"], searchPlaceholder: ["搜索当前清单的任务…", "Search tasks in this view…", "Rechercher dans cette liste…"],
+    sourceLine: ["{file} · 第 {line} 行", "{file} · line {line}", "{file} · ligne {line}"],
+    noPlanScope: ["尚无可统计任务，可先阅读项目文档，或选择已有任务清单。", "No trackable tasks yet. Read the project notes or choose an existing checklist.", "Aucune tâche à suivre pour le moment. Consultez les notes du projet ou choisissez une liste existante."],
+    groupedMethod: ["任务按文档章节分组，同一任务只计入整体进度一次。百分比不代表工时完成度。", "Tasks are grouped by document section and counted once in overall progress. This is not an estimate of work hours.", "Les tâches sont regroupées par section du document et comptées une seule fois dans l’avancement global. Ce pourcentage ne mesure pas les heures de travail."],
+    syncing: ["自动刷新", "Auto-refresh", "Actualisation auto"], refresh: ["刷新", "Refresh", "Actualiser"], syncFailed: ["同步失败 · 保留上次读数", "Sync failed · showing last reading", "Échec de la synchronisation · dernière lecture conservée"],
+    overall: ["整体进度", "Overall progress", "Avancement global"], taskSource: ["任务清单", "Task checklist", "Liste des tâches"], mainChecklist: ["主验收清单", "Main checklist", "Liste principale"],
+    completedTasks: ["已完成任务", "tasks complete", "tâches terminées"], noChecklist: ["尚无清单", "No checklist yet", "Aucune liste pour le moment"],
+    progressLabel: ["主验收清单完成比例", "Main checklist progress", "Avancement de la liste principale"], waiting: ["等待任务清单", "Waiting for a checklist", "En attente d’une liste"],
+    progressValue: ["{total} 项中完成 {done} 项，{percent}%", "{done} of {total} complete ({percent}%)", "{done} sur {total} terminées ({percent} %)"],
+    noProgress: ["尚无任务清单，未计算完成比例", "No checklist found; progress has not been calculated", "Aucune liste trouvée ; l’avancement n’a pas été calculé"],
+    remaining: ["剩余主验收任务：{count} 项", "Remaining checklist items: {count}", "Éléments restants dans la liste principale : {count}"], connectedWaiting: ["项目已连接 · 等待任务清单", "Connected · waiting for a checklist", "Projet connecté · en attente d’une liste"],
+    details: ["详情", "Details", "Détails"], method: ["主清单等权计数；阶段子任务单独统计。百分比不代表工时完成度。", "Main checklist items have equal weight. Milestones are counted separately. This is not an estimate of work hours.", "Les éléments de la liste principale ont le même poids. Les étapes sont comptées séparément. Ce pourcentage ne mesure pas les heures de travail."],
+    noPlanMethod: ["尚无任务清单，暂不计算完成比例。发现任务清单后会自动开始跟踪。", "No checklist yet. Tracking will start automatically when a task plan is found.", "Aucune liste pour le moment. Le suivi commencera automatiquement dès qu’un plan sera trouvé."],
+    currentLevel: ["当前阶段", "Current stage", "Étape en cours"], next: ["下一步", "Up next", "À suivre"],
+    nextNoPlan: ["在项目中保存 tasks.md、TODO.md 或计划文档，进度条会自动识别其中的复选任务。", "Save a tasks.md, TODO.md or plan document in the project. Checkbox tasks will be detected automatically.", "Enregistrez un fichier tasks.md, TODO.md ou un document de planification dans le projet. Les tâches à cocher seront détectées automatiquement."],
+    checklistComplete: ["清单中的任务已全部完成，等待最终验收。", "All checklist items are complete. Final acceptance is still required.", "Toutes les tâches de la liste sont terminées. La validation finale reste nécessaire."],
+    completeShort: ["任务清单已完成", "Checklist complete", "Liste terminée"], estimateAction: ["设置剩余工时…", "Set work estimate…", "Estimer le travail restant…"],
+    tasks: ["任务清单", "Checklist", "Liste des tâches"], all: ["全部", "All", "Toutes"], pending: ["未完成", "Remaining", "Restantes"], done: ["已完成", "Done", "Terminées"],
+    dependency: ["有依赖", "Dependency", "Dépendance"], blocked: ["阻塞中", "Blocked", "Bloquée"], todo: ["待完成", "To do", "À faire"],
+    emptyTasks: ["这一栏暂时没有任务。", "No tasks match this filter.", "Aucune tâche ne correspond à ce filtre."], emptyPlan: ["等待项目内的任务清单，发现后将自动开始跟踪。", "Waiting for a project checklist. Tracking starts when one is found.", "En attente d’une liste de tâches du projet. Le suivi commencera dès qu’une liste sera trouvée."],
+    sources: ["进度从哪里来？", "How is progress calculated?", "Comment l’avancement est-il calculé ?"],
+    sourcesHelp: ["主清单读取勾选状态；模块读取关联台账中的任务、状态与依赖，不根据代码行数、提交数量或聊天活跃度猜测。主验收计数和模块状态分别展示。", "Main progress follows checkboxes; module tasks, states and dependencies follow linked work plans. Lines of code, commits and chat activity do not determine progress. Main acceptance counts stay independent.", "L’avancement principal suit les cases cochées ; les tâches, états et dépendances des modules suivent les plans liés. Les lignes de code, les commits et les échanges ne déterminent pas l’avancement. La validation principale est comptée séparément."],
+    milestones: ["阶段足迹", "Milestones", "Étapes"], noMilestones: ["此项目按单一主清单跟踪。", "This project uses a single checklist.", "Ce projet utilise une seule liste."],
+    dependencies: ["有外部依赖的主任务：{count} 项", "Tasks with external dependencies: {count}", "Tâches avec dépendances externes : {count}"],
+    dependencyHelp: ["仍可继续开发的阶段，也可能有待验收的外部依赖。", "Development may continue while external acceptance requirements remain open.", "Le développement peut continuer pendant que des validations externes restent en attente."],
+    handoff: ["最新交接", "Latest handoff", "Dernière passation"], commits: ["最近提交", "Recent commits", "Commits récents"], noCommits: ["暂无 Git 提交记录", "No Git commits available.", "Aucun commit Git disponible."],
+    modified: ["文件更新于 {date}", "File updated {date}", "Fichier modifié le {date}"], lastRead: ["最近读取 {time} · 每 5 秒刷新", "Last checked {time} · refreshes every 5 seconds", "Dernière lecture à {time} · actualisation toutes les 5 secondes"],
+    connectSubtitle: ["选择工具，直接连接本机已有项目。", "Choose a tool, then connect a project on this Mac.", "Choisissez un outil, puis connectez un projet présent sur ce Mac."],
+    close: ["关闭", "Close", "Fermer"], projectSource: ["项目来源", "Project source", "Source du projet"], manual: ["手动输入", "Manual", "Saisie manuelle"],
+    catalogReading: ["正在读取本机项目…", "Finding local projects…", "Recherche des projets locaux…"], catalogCount: ["本机项目：{count} 个", "Local projects: {count}", "Projets locaux : {count}"],
+    catalogEmpty: ["尚未发现该工具的本机项目，可切换来源或手动连接", "No local projects found. Try another source or connect manually.", "Aucun projet local trouvé. Essayez une autre source ou connectez un projet manuellement."],
+    catalogUnavailable: ["项目列表暂不可用", "Project list unavailable", "Liste des projets indisponible"], availableProjects: ["可连接项目", "Available projects", "Projets disponibles"],
+    catalogNote: ["读取本机项目目录，自动识别任务清单。没有清单的项目也可以先连接。", "Reads local project folders and detects task plans. You can also connect a project before it has a checklist.", "Lit les dossiers de projets locaux et détecte leurs plans de tâches. Vous pouvez aussi connecter un projet sans liste de tâches."],
+    connected: ["已连接", "Connected", "Connecté"], connect: ["连接", "Connect", "Connecter"], switch: ["切换", "Switch", "Afficher"],
+    removed: ["目录已不存在", "Folder no longer exists", "Le dossier n’existe plus"], detectedPlan: ["任务清单 · {file}", "Checklist · {file}", "Liste · {file}"], noPlanConnect: ["尚无任务清单 · 可先连接", "No checklist yet · connect now", "Aucune liste · connexion possible"],
+    name: ["项目名称", "Project name", "Nom du projet"], namePlaceholder: ["例如 My next project", "e.g. My next project", "Ex. Mon prochain projet"],
+    root: ["项目绝对路径", "Absolute project path", "Chemin absolu du projet"], taskFile: ["任务文档相对路径", "Relative checklist path", "Chemin relatif de la liste"],
+    manualHint: ["支持复选清单、带状态字段的模块任务及任务状态表格。会读取清单链接的本地任务台账；路径留空时自动查找。", "Supports checklists, module task headings with state fields, and Task/Status tables. Linked local work plans are read too. Leave the path blank to detect a plan.", "Accepte les listes à cocher, les titres de tâches de module avec un état et les tableaux de tâches et d’états. Les plans locaux liés sont également lus. Laissez le chemin vide pour une détection automatique."],
+    estimateTitle: ["剩余任务，大约还要多久？", "How much work is left?", "Combien de travail reste-t-il ?"],
+    estimateHelp: ["填写你认可的工作小时范围。外部等待时间不计入，留空时保持“待估算”。", "Enter a working-hour range for each remaining item. External wait time is excluded. Leave fields blank to keep the estimate unknown.", "Indiquez une plage d’heures de travail pour chaque élément restant. Les délais d’attente externes sont exclus. Laissez les champs vides pour conserver une estimation inconnue."],
+    unfinished: ["未完成任务", "Remaining item", "Élément restant"], minHours: ["最少 h", "Min h", "Min. h"], maxHours: ["最多 h", "Max h", "Max. h"],
+    minHoursLabel: ["{id} 最少小时", "{id} minimum hours", "{id} : heures minimales"], maxHoursLabel: ["{id} 最多小时", "{id} maximum hours", "{id} : heures maximales"],
+    hoursPerDay: ["每天投入", "Hours per day", "Heures par jour"], hoursUnit: ["小时", "hours", "heures"], saveEstimate: ["保存估算", "Save estimate", "Enregistrer l’estimation"],
+    estimateIncomplete: ["每项请填写完整范围，或同时留空。", "Enter both ends of each range, or leave both blank.", "Renseignez les deux bornes de chaque plage ou laissez les deux champs vides."],
+    etaUnknown: ["完成时间待估算", "Completion time unknown", "Délai restant à estimer"], etaMissing: ["缺少 {count} 项工时估算；外部等待时间未知", "{count} estimates missing. External wait time is unknown.", "{count} estimations manquantes. Le délai d’attente externe est inconnu."],
+    etaDone: ["清单已完成", "Checklist complete", "Liste terminée"], etaDoneDetail: ["以项目最终验收为准", "Subject to final project acceptance.", "Sous réserve de la validation finale du projet."],
+    etaNoPlan: ["未建立计划", "No plan yet", "Aucun plan pour le moment"], etaNoPlanDetail: ["已连接项目，尚未发现 Markdown 任务清单", "Project connected; no Markdown checklist found yet.", "Projet connecté ; aucune liste de tâches Markdown trouvée."],
+    etaDays: ["约 {low}–{high} 个工作日", "~{low}–{high} workdays", "≈ {low}–{high} jours ouvrés"],
+    etaDetail: ["{low}–{high} 工时，每天 {daily} 小时；不含依赖等待", "{low}–{high} work hours at {daily} hours/day; external waits excluded.", "{low}–{high} heures de travail à raison de {daily} heures par jour ; attentes externes exclues."],
+    language: ["界面语言", "Interface language", "Langue de l’interface"], systemLanguage: ["跟随系统", "System language", "Langue du système"],
+    readFailed: ["读取失败：{error}", "Could not read project: {error}", "Impossible de lire le projet : {error}"], requestFailed: ["请求失败 ({status})", "Request failed ({status})", "Échec de la requête ({status})"],
+    updated: ["任务清单已更新", "Checklist updated", "Liste de tâches mise à jour"], refreshed: ["已读取最新任务清单", "Checklist is up to date", "La liste de tâches est à jour"],
+    connectedToast: ["项目已连接", "Project connected", "Projet connecté"], waitingToast: ["项目已连接，等待任务清单", "Connected. Waiting for a checklist.", "Projet connecté. En attente d’une liste."],
+    switched: ["已切换到项目", "Switched project", "Projet affiché"], estimateSaved: ["工时估算已保存", "Work estimate saved", "Estimation de travail enregistrée"], languageSaved: ["语言已更新", "Language updated", "Langue mise à jour"],
+    noProjects: ["点击“连接新项目”开始跟踪。", "Connect a project to start tracking.", "Connectez un projet pour commencer le suivi."],
+  };
+  const errors = {
+    "关联任务文档不存在或已移动":["The linked work plan is missing or has moved.", "Le plan de travail lié est introuvable ou a été déplacé."],
+    "无法读取关联任务文档，请检查权限":["The linked work plan cannot be read. Check its permissions.", "Impossible de lire le plan lié. Vérifiez ses autorisations."],
+    "关联任务文档不是有效的 UTF-8 文本":["The linked work plan is not valid UTF-8 text.", "Le plan lié n’est pas un texte UTF-8 valide."],
+    "无法读取关联任务文档，请检查文件及大小":["The linked work plan cannot be read. Check the file and its size.", "Impossible de lire le plan lié. Vérifiez le fichier et sa taille."],
+    "关联文档中未识别到模块任务，请检查任务格式":["No module task records were recognized in the linked document. Check its format.", "Aucune tâche de module reconnue dans le document lié. Vérifiez son format."],
+    "关联任务文档超过读取上限（8 份）":["Linked work plans exceed the eight-file reading limit.", "Les plans liés dépassent la limite de huit fichiers."],
+    "关联任务 ID 重复，请核对任务台账":["Linked task IDs are duplicated. Check the work plan.", "Des identifiants de tâches sont en double. Vérifiez le plan de travail."],
+    "文件不存在或已移动，请检查项目路径和任务清单":["The file is missing or has moved. Check the project folder and checklist.", "Le fichier est introuvable ou a été déplacé. Vérifiez le dossier du projet et la liste."], "无法读取文件，请检查文件权限":["The file could not be read. Check its permissions.", "Impossible de lire le fichier. Vérifiez ses autorisations."],
+    "仅允许本机访问":["Local access only.", "Accès local uniquement."], "项目不存在":["Project not found.", "Projet introuvable."], "未找到":["Not found.", "Introuvable."],
+    "请求来源不匹配":["The request origin does not match.", "L’origine de la requête ne correspond pas."], "请求大小不正确":["Invalid request size.", "Taille de requête incorrecte."],
+    "请输入存在的项目绝对路径":["Enter an absolute path to an existing project folder.", "Saisissez le chemin absolu d’un dossier de projet existant."], "请填写项目名称":["Enter a project name.", "Saisissez un nom de projet."],
+    "估算格式不正确":["Invalid estimate format.", "Format d’estimation incorrect."], "估算任务或范围不正确":["Invalid task or estimate range.", "Tâche ou plage d’estimation incorrecte."],
+    "工时必须为有效数字":["Work hours must be finite numbers.", "Les heures de travail doivent être des nombres finis."], "工时范围应为 0–10000，且下限不大于上限":["Use a range from 0 to 10,000 hours, with the minimum no greater than the maximum.", "Utilisez une plage de 0 à 10 000 heures, avec un minimum inférieur ou égal au maximum."],
+    "每日工时应大于 0 且不超过 24":["Daily work hours must be greater than 0 and no more than 24.", "Le nombre d’heures par jour doit être supérieur à 0 et ne pas dépasser 24."],
+    "任务文档必须位于项目目录内":["The checklist must be inside the project folder.", "La liste doit se trouver dans le dossier du projet."], "请选择 Markdown (.md) 任务文档":["Choose a Markdown (.md) checklist.", "Choisissez une liste Markdown (.md)."],
+    "任务文档超过 2 MB":["The checklist exceeds 2 MB.", "La liste dépasse 2 Mo."], "任务文档中没有找到可统计的复选任务":["No checkbox tasks were found in the document.", "Aucune tâche à cocher trouvée dans le document."],
+    "主任务清单已变化，请更新主任务 ID 配置":["The main checklist changed. Update the configured task IDs.", "La liste principale a changé. Mettez à jour les identifiants de tâches configurés."], "主任务 ID 重复，请为任务使用唯一 ID":["Task IDs must be unique.", "Chaque tâche doit avoir un identifiant unique."],
+    "项目目录不存在":["The project folder does not exist.", "Le dossier du projet n’existe pas."], "请选择 Codex 或 Claude Code":["Choose Codex or Claude Code.", "Choisissez Codex ou Claude Code."],
+    "本地项目索引过大，请使用手动连接":["The local project index is too large. Use a manual connection.", "L’index local des projets est trop volumineux. Utilisez une connexion manuelle."],
+    "无法读取本地项目索引，请重试或使用手动连接":["Could not read the local project index. Retry or connect manually.", "Impossible de lire l’index local. Réessayez ou connectez le projet manuellement."],
+    "该项目目录已不可用，请刷新项目列表":["The project folder is unavailable. Refresh the project list.", "Le dossier du projet est indisponible. Actualisez la liste des projets."],
+    "不支持的界面语言":["Unsupported interface language.", "Langue d’interface non prise en charge."], "请选择要移除的项目":["Choose a project to remove.", "Choisissez un projet à retirer."], "请求格式不正确":["Invalid request format.", "Format de requête incorrect."], "请选择任务文档":["Choose a checklist document.", "Choisissez une liste de tâches."]
+  };
+  function resolve(preference, systemLanguage = "en") {
+    if (["en", "zh", "fr"].includes(preference)) return preference;
+    const base = systemLanguage.toLowerCase().split(/[-_]/)[0];
+    return ["zh", "fr"].includes(base) ? base : "en";
+  }
+  function locale(language, systemLanguage = "en") {
+    if (language === "fr") return /^fr(?:[-_]|$)/i.test(systemLanguage) ? systemLanguage.replaceAll("_", "-") : "fr-FR";
+    return language === "zh" ? "zh-CN" : "en-CA";
+  }
+  function number(value, language = "en") {
+    return new Intl.NumberFormat(locale(language), {maximumFractionDigits: 10}).format(value);
+  }
+  function translate(key, values = {}, language = "en") {
+    const pair = strings[key];
+    if (!pair) throw new Error(`Missing translation: ${key}`);
+    return pair[language === "zh" ? 0 : language === "fr" ? 2 : 1].replace(/\{(\w+)\}/g, (_, name) => {
+      const value = values[name];
+      return typeof value === "number" ? number(value, language) : String(value ?? `{${name}}`);
+    });
+  }
+  globalThis.QuestlogI18n = Object.freeze({strings, errors, resolve, locale, number, translate, error: (message, language) => language === "zh" ? message : errors[message]?.[language === "fr" ? 1 : 0] || message});
+})();

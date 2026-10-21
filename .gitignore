@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.DS_Store
+Questlog.app/
+*.app/
+.venv/
+.env
+.env.*
+artifacts/
+projects.json
+.projects-*.json

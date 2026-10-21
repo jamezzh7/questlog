@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Questlog</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/i18n.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body class="compact">
+  <div id="app">
+    <aside class="sidebar full-only" data-window-drag>
+      <div class="sidebar-title">Questlog</div>
+      <div class="sidebar-label" data-i18n="projects">Projects</div>
+      <nav id="projects" data-i18n-label="projectList" data-window-no-drag></nav>
+      <button id="add-project" class="add-project" type="button" aria-haspopup="dialog" aria-controls="project-dialog" aria-expanded="false" data-window-no-drag><span class="symbol icon-plus" aria-hidden="true"></span><span data-i18n="connectAction">Connect Project…</span></button>
+      <div class="sidebar-bottom" data-window-no-drag><span class="local-note" data-i18n="local">Local only</span><button id="settings" class="icon-button" data-i18n-label="settings" data-i18n-title="settings" aria-haspopup="dialog" aria-controls="settings-dialog"><span class="symbol icon-settings" aria-hidden="true"></span></button></div>
+    </aside>
+    <header class="toolbar full-only" data-window-drag>
+      <span id="sync-state" role="status"></span>
+      <div class="toolbar-actions" data-window-no-drag>
+        <button id="refresh" class="toolbar-button" data-i18n-title="refresh"><span class="symbol icon-refresh" aria-hidden="true"></span><span data-i18n="refresh">Refresh</span></button>
+        <button id="show-resources" class="toolbar-button" aria-pressed="false"><span class="symbol icon-document" aria-hidden="true"></span><span data-i18n="resources">Project info</span></button>
+        <button id="toggle-view" class="toolbar-button" data-i18n-label="compact"><span class="symbol icon-collapse" aria-hidden="true"></span><span data-i18n="collapse">Collapse</span></button>
+      </div>
+    </header>
+    <main tabindex="-1">
+      <div class="reading-column">
+        <div id="error" class="error-banner" role="alert" hidden></div>
+        <button id="repair-source" class="text-button" data-i18n="choosePlan" hidden>Choose checklist…</button>
+        <div id="loading" class="initial-loading" data-i18n="reading">Reading project tasks…</div>
+        <section id="empty-state" class="empty-state" hidden><span class="symbol icon-project" aria-hidden="true"></span><h1 data-i18n="emptyTitle">Connect your first project</h1><p data-i18n="noProjects"></p><button id="empty-connect" class="primary-button" data-i18n="connectAction">Connect Project…</button></section>
+        <div id="content" hidden>
+          <section class="project-heading full-only"><span class="symbol icon-project" aria-hidden="true"></span><h1 id="project-title">Questlog</h1></section>
+          <div class="mini-project compact-only"><strong id="mini-name">Questlog</strong><span id="mini-eta"></span></div>
+          <section class="project-summary">
+            <div class="overall-summary"><span class="full-only" data-i18n="mainChecklist">Main checklist</span><strong id="overall-count">—</strong><strong id="percent">—</strong><div id="overall-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="bar-fill"></div></div></div>
+            <div class="current-summary full-only"><span id="current-kind" class="summary-label">Current stage</span><span id="current-title"></span><span id="phase-count"></span><button id="view-current" class="text-button" data-i18n="viewStage">View stage</button></div>
+            <div class="next-summary full-only"><span id="next-kind" class="summary-label">Up next</span><p id="next-task"></p></div>
+            <div class="estimate-summary full-only"><span id="eta-label"></span><button id="estimate" class="text-button" data-i18n="estimateAction">Set work estimate…</button></div>
+            <div class="compact-footer compact-only"><span id="mini-current"></span><span id="mini-phase-count"></span><button id="mini-expand" class="text-button" data-i18n="details">Details</button></div>
+          </section>
+          <p id="work-warning" class="work-warning full-only" role="status" hidden></p>
+          <section id="tasks-view" class="tasks-section full-only">
+            <div class="list-controls">
+            <div class="section-heading">
+              <details id="scope-picker" class="scope-picker"><summary><h2 id="task-heading">Main checklist</h2><span id="task-total"></span><span class="symbol icon-chevron" aria-hidden="true"></span></summary><div class="scope-menu"><div class="menu-label" data-i18n="viewScope">View checklist</div><div id="milestones"></div><button id="scope-source" class="milestone-row" data-i18n="choosePlan">Choose checklist…</button></div></details>
+              <span class="read-only" data-i18n="readOnly">Read only</span>
+            </div>
+            <p id="task-scope" class="scope-note"></p>
+            <div class="task-tools"><label class="task-search"><span class="symbol icon-search" aria-hidden="true"></span><span class="sr-only" data-i18n="searchTasks">Search tasks</span><input id="task-search" type="search" data-i18n-placeholder="searchPlaceholder"></label><div class="tabs" role="group" data-i18n-label="tasks"><button data-filter="all" class="active" data-i18n="all">All</button><button data-filter="pending" data-i18n="pending">Remaining</button><button data-filter="done" data-i18n="done">Done</button></div></div>
+            </div>
+            <div id="task-list" role="list" data-i18n-label="tasks"></div>
+          </section>
+          <section id="resources-view" class="full-only" hidden>
+            <div class="resource-heading"><h2 data-i18n="resources">Project info</h2><button id="back-tasks" class="text-button" data-i18n="backTasks">Back to tasks</button></div>
+            <section class="resource-section"><h3 data-i18n="projectContext">Project notes</h3><p class="context-hint" data-i18n="contextHint"></p><div id="project-notes"></div></section>
+            <section class="resource-section"><h3 data-i18n="commits">Recent commits</h3><div id="activity"></div></section>
+            <section class="resource-section"><h3 data-i18n="sources">Progress calculation</h3><p id="method"></p><p data-i18n="sourcesHelp"></p><div id="dependency-note"><strong id="dependency-count"></strong><p data-i18n="dependencyHelp"></p></div><div id="sources"></div></section>
+          </section>
+          <footer class="page-footer full-only"><button id="choose-source" class="source-button" aria-haspopup="dialog" aria-controls="source-dialog"><span class="symbol icon-document" aria-hidden="true"></span><span id="active-source"></span><span class="symbol icon-chevron" aria-hidden="true"></span></button><span id="last-read"></span></footer>
+        </div>
+      </div>
+    </main>
+  </div>
+  <dialog role="dialog" aria-modal="true" id="settings-dialog" aria-labelledby="settings-title"><div class="dialog-header"><h2 id="settings-title" data-i18n="settings">Settings</h2><button type="button" class="close-dialog icon-button" data-i18n-label="close"><span class="symbol icon-close" aria-hidden="true"></span></button></div><label class="language-control"><span data-i18n="language">Interface language</span><select id="language-select" data-i18n-label="language"><option value="auto" data-i18n="systemLanguage">System language</option><option value="en">English</option><option value="zh">简体中文</option><option value="fr">Français</option></select></label><p class="form-hint" data-i18n="localHelp"></p><div class="dialog-actions"><button id="quit" class="secondary-button native-only" data-i18n="quit">Quit Questlog</button><button type="button" class="primary-button close-dialog" data-i18n="close">Close</button></div></dialog>
+  <dialog role="dialog" aria-modal="true" id="project-dialog" aria-labelledby="connect-title" aria-describedby="connect-subtitle">
+    <div class="dialog-header"><h2 id="connect-title" data-i18n="connectNew">Connect project</h2><button type="button" class="close-dialog icon-button" data-i18n-label="close"><span class="symbol icon-close" aria-hidden="true"></span></button></div>
+    <p id="connect-subtitle" data-i18n="connectSubtitle"></p>
+    <div class="provider-tabs" role="group" data-i18n-label="projectSource"><button type="button" data-provider="codex" class="active" aria-pressed="true">Codex</button><button type="button" data-provider="claude" aria-pressed="false">Claude Code</button><button type="button" data-provider="manual" aria-pressed="false" data-i18n="manual">Manual</button></div>
+    <section id="discovery-section"><div class="catalog-heading"><span id="catalog-status" role="status"></span><button type="button" id="refresh-catalog" class="text-button" data-i18n="refresh">Refresh</button></div><div id="project-catalog" data-i18n-label="availableProjects"></div><p class="catalog-note" data-i18n="catalogNote"></p></section>
+    <p id="connection-error" class="form-error" role="alert" hidden></p>
+    <form id="project-form" hidden><label><span data-i18n="name">Project name</span><input name="name" required data-i18n-placeholder="namePlaceholder" maxlength="80"></label><label><span data-i18n="root">Absolute project path</span><input name="root" required placeholder="/Users/you/Projects/my-project"></label><label><span data-i18n="taskFile">Relative checklist path</span><input name="tasksFile" data-i18n-placeholder="autoPlan"></label><p class="form-hint" data-i18n="manualHint"></p><p class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" class="secondary-button close-dialog" data-i18n="cancel">Cancel</button><button class="primary-button" type="submit" data-i18n="connect">Connect</button></div></form>
+  </dialog>
+  <dialog role="dialog" aria-modal="true" id="estimate-dialog" aria-labelledby="estimate-title"><form id="estimate-form"><div class="dialog-header"><h2 id="estimate-title" data-i18n="estimateTitle">How much work is left?</h2><button type="button" class="close-dialog icon-button" data-i18n-label="close"><span class="symbol icon-close" aria-hidden="true"></span></button></div><p data-i18n="estimateHelp"></p><div class="estimate-labels"><span data-i18n="unfinished">Remaining item</span><span data-i18n="minHours">Min h</span><span data-i18n="maxHours">Max h</span></div><div id="estimate-rows"></div><label class="hours-per-day"><span data-i18n="hoursPerDay">Hours per day</span><input name="hoursPerDay" type="number" min="0.1" max="24" step="0.1" value="4" required><span data-i18n="hoursUnit">hours</span></label><p class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" class="secondary-button close-dialog" data-i18n="cancel">Cancel</button><button class="primary-button" type="submit" data-i18n="saveEstimate">Save estimate</button></div></form></dialog>
+  <dialog role="dialog" aria-modal="true" id="source-dialog" aria-labelledby="source-title"><form id="source-form"><div class="dialog-header"><h2 id="source-title" data-i18n="choosePlan">Choose checklist…</h2><button type="button" class="close-dialog icon-button" data-i18n-label="close"><span class="symbol icon-close" aria-hidden="true"></span></button></div><p data-i18n="sourceHelp"></p><div id="source-options" role="group" data-i18n-label="planOptions"></div><label><span data-i18n="taskFile">Relative checklist path</span><input id="source-path" required placeholder="specs/project/tasks.md"></label><p class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" class="secondary-button close-dialog" data-i18n="cancel">Cancel</button><button class="primary-button" type="submit" data-i18n="usePlan">Use this checklist</button></div></form></dialog>
+  <dialog role="dialog" aria-modal="true" id="document-dialog" aria-labelledby="document-title"><div class="dialog-header"><h2 id="document-title"></h2><button type="button" class="close-dialog icon-button" data-i18n-label="close"><span class="symbol icon-close" aria-hidden="true"></span></button></div><p data-i18n="documentReadOnly"></p><pre id="document-text" tabindex="0"></pre></dialog>
+  <dialog role="dialog" aria-modal="true" id="remove-dialog" aria-labelledby="remove-title" aria-describedby="remove-description"><h2 id="remove-title" data-i18n="removeTitle">Remove project connection?</h2><p id="remove-name"></p><p id="remove-description" data-i18n="removeDescription"></p><p id="remove-error" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button id="cancel-remove" class="secondary-button" type="button" autofocus data-i18n="cancel">Cancel</button><button id="confirm-remove" class="danger-button" type="button" data-i18n="removeProject">Remove project</button></div></dialog>
+  <div id="toast" role="status" hidden></div>
+</body>
+</html>
