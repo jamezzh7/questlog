@@ -11,7 +11,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-5874A3" alt="MIT 许可"></a>
 </p>
 
-<p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
+<p align="center"><a href="README.md">English</a> · <strong>简体中文</strong> · <a href="README.fr.md">Français</a></p>
 <p align="center"><a href="#开始使用">开始使用</a> · <a href="#功能">功能</a> · <a href="docs/privacy.md">隐私</a> · <a href="CONTRIBUTING.md">参与贡献</a></p>
 
 <p align="center"><img src="docs/images/widget.jpg" width="420" alt="原生小窗显示虚构示例项目 Orbit 的 60% 进度"></p>

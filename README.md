@@ -11,7 +11,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-5874A3" alt="MIT license"></a>
 </p>
 
-<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.fr.md">Français</a></p>
 <p align="center"><a href="#getting-started">Get started</a> · <a href="#features">Features</a> · <a href="docs/privacy.md">Privacy</a> · <a href="CONTRIBUTING.md">Contribute</a></p>
 
 <p align="center"><img src="docs/images/widget.jpg" width="420" alt="Questlog's native floating widget showing the fictional Orbit project at 60 percent"></p>
