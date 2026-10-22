@@ -1,5 +1,6 @@
 "use strict";
 const $ = (selector) => document.querySelector(selector);
+const nativeAPI = window.webkit?.messageHandlers?.questlogAPI;
 const native = Boolean(window.webkit?.messageHandlers?.questlog);
 const I18N = globalThis.QuestlogI18n;
 let languagePreference = localStorage.getItem("questlog.language") || "auto";
@@ -12,7 +13,7 @@ let data = null;
 let projects = [];
 let filter = "all";
 let loading = false;
-let full = new URLSearchParams(location.search).get("view") === "full";
+let full = Boolean(nativeAPI) || new URLSearchParams(location.search).get("view") === "full";
 let lastSignature = "";
 let toastTimeout;
 let connectionProvider = "codex";
@@ -142,13 +143,22 @@ function setView(expanded) {
   if (native) nativeAction(full ? "expand" : "compact");
   const url = new URL(location.href);
   url.searchParams.set("view", full ? "full" : "mini");
-  history.replaceState(null, "", url);
+  if (!nativeAPI) history.replaceState(null, "", url);
 }
 document.body.classList.toggle("native", native);
 setView(full);
 $("#toggle-view").addEventListener("click", () => setView(!full));
 $("#mini-expand").addEventListener("click", () => setView(true));
 $("#quit").addEventListener("click", () => nativeAction("quit"));
+$("#privacy").addEventListener("click", async (event) => {
+  await closeDialog($("#settings-dialog")); showDialog($("#privacy-dialog"), $("#settings"));
+});
+$("#privacy-online").addEventListener("click", () => api("/api/privacy/open", {}).catch((failure) => error(failure.message)));
+$("#reset-permissions").addEventListener("click", async () => {
+  try { const result = await api("/api/permissions/reset", {}); if (!result.cancelled) { await closeDialog($("#settings-dialog")); lastSignature = ""; await refresh(); } }
+  catch (failure) { error(failure.message); }
+});
+if (nativeAPI) { $("#privacy").hidden = false; $("#reset-permissions").hidden = false; }
 $("#settings").addEventListener("click", (event) => showDialog($("#settings-dialog"), event.currentTarget));
 function setResourceView(show, focus = false) {
   viewScroll[resourceView ? "resources" : "tasks"] = $("main").scrollTop;
@@ -190,6 +200,11 @@ document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener(
 }));
 
 async function api(path, body) {
+  if (nativeAPI) {
+    const response = await nativeAPI.postMessage({path, ...(body === undefined ? {} : {body})});
+    if (response.status < 200 || response.status >= 300) throw Object.assign(new Error(I18N.error(response.body?.error || t("requestFailed", {status: response.status}), language)), {status: response.status});
+    return response.body;
+  }
   const response = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
   const result = await response.json();
   if (!response.ok) throw new Error(I18N.error(result.error || t("requestFailed", {status: response.status}), language));
@@ -206,7 +221,8 @@ function error(message) {
 }
 function renderSyncState() {
   const failed = !$("#error").hidden;
-  text("#sync-state", t(failed ? "syncFailed" : "syncing"));
+  const needsAccess = nativeAPI && !$("#authorize-project").hidden;
+  text("#sync-state", t(needsAccess ? "accessRequired" : failed ? "syncFailed" : "syncing"));
   $("#sync-state").classList.toggle("sync-error", failed);
 }
 function shortTitle(title) { return title.trim(); }
@@ -215,7 +231,7 @@ async function selectProject(identity) {
   if (projectId) localStorage.setItem("questlog.project", projectId); else localStorage.removeItem("questlog.project");
   const url = new URL(location.href);
   if (projectId) url.searchParams.set("project", projectId); else url.searchParams.delete("project");
-  history.replaceState(null, "", url);
+  if (!nativeAPI) history.replaceState(null, "", url);
   lastSignature = ""; data = null;
   stageId = null; scopeChosen = false; suspendedScope = null; taskNotesOpen.clear(); filter = "all"; $("#task-search").value = ""; noteOpen.clear();
   setResourceView(false); viewScroll.tasks = 0; viewScroll.resources = 0;
@@ -452,6 +468,7 @@ async function refresh(manual = false) {
     const signature = JSON.stringify([result.revision, result.sources, result.primary, result.eta, result.activity, result.context, result.warnings, result.groups]);
     const firstPaint = !data || data.id !== result.id;
     const changed = data && data.revision !== result.revision;
+    $("#authorize-project").hidden = true;
     data = result;
     if (modular() && !scopeChosen) stageId = "work";
     if (firstPaint && data.state === "no-plan") setResourceView(true);
@@ -463,7 +480,11 @@ async function refresh(manual = false) {
     if (firstPaint) animatePage();
     if (changed) toast(t("updated"));
     else if (manual) toast(t("refreshed"));
-  } catch (failure) { if (projectId === selected) { error(t("readFailed", {error: failure.message})); $("#loading").hidden = true; $("#repair-source").hidden = false; } }
+  } catch (failure) { if (projectId === selected) {
+    if (failure.status === 403) { data = null; lastSignature = ""; $("#content").hidden = true; }
+    error(t("readFailed", {error: failure.message})); $("#authorize-project").hidden = !nativeAPI || failure.status !== 403;
+    $("#loading").hidden = true; $("#repair-source").hidden = failure.status === 403; renderSyncState();
+  } }
   finally { loading = false; $("#refresh").classList.remove("is-loading"); if (selected !== projectId) refresh(); }
 }
 $("#refresh").addEventListener("click", () => refresh(true));
@@ -500,7 +521,19 @@ async function loadCatalog() {
     text("#connection-error", failure.message); $("#connection-error").hidden = false;
   }
 }
+async function authorizeRegistry() {
+  try {
+    const result = await api("/api/permissions/registry", {provider: connectionProvider});
+    if (!result.cancelled) await loadCatalog();
+  } catch (failure) { text("#connection-error", failure.message); $("#connection-error").hidden = false; }
+}
 function renderCatalog(result) {
+    $("#choose-registry").hidden = !nativeAPI;
+    if (result.needsPermission) {
+      text("#catalog-status", t("registryPermission"));
+      $("#project-catalog").replaceChildren();
+      return;
+    }
     text("#catalog-status", result.projects.length ? t("catalogCount", {count: result.projects.length}) : t("catalogEmpty"));
     $("#project-catalog").replaceChildren(...result.projects.map((project, index) => {
       const row = node("button", "catalog-project"); row.type = "button";
@@ -509,7 +542,7 @@ function renderCatalog(result) {
       const icon = node("span", "symbol icon-project"); icon.setAttribute("aria-hidden", "true");
       const info = node("span", "catalog-info");
       info.append(node("strong", "", project.name), node("span", "catalog-path", project.root),
-                  node("span", "catalog-plan", !project.available ? t("removed") : project.connectedId ? t("connected") : project.tasksFile ? t("detectedPlan", {file: project.tasksFile}) : t("noPlanConnect")));
+                  node("span", "catalog-plan", !project.available ? t("removed") : project.requiresAuthorization ? t("authorizeConnect") : project.connectedId ? t("connected") : project.tasksFile ? t("detectedPlan", {file: project.tasksFile}) : t("noPlanConnect")));
       row.append(icon, info, node("span", "catalog-action", t(project.connectedId ? "switch" : "connect")));
       row.addEventListener("click", () => connectCatalogProject(project, row));
       return row;
@@ -529,6 +562,28 @@ async function connectCatalogProject(project, button) {
 }
 document.querySelectorAll("[data-provider]").forEach((button) => button.addEventListener("click", () => selectConnectionProvider(button.dataset.provider)));
 $("#refresh-catalog").addEventListener("click", loadCatalog);
+$("#choose-registry").addEventListener("click", authorizeRegistry);
+$("#choose-folder").addEventListener("click", async () => {
+  try {
+    const result = await api("/api/permissions/folder", {});
+    if (result.cancelled) return;
+    const form = $("#project-form"); form.elements.root.value = result.root;
+    if (!form.elements.name.value.trim()) form.elements.name.value = result.root.split("/").filter(Boolean).pop() || "Project";
+    form.querySelector(".form-error").textContent = "";
+  } catch (failure) { $("#project-form .form-error").textContent = failure.message; }
+});
+$("#authorize-project").addEventListener("click", async () => {
+  try {
+    const result = await api("/api/permissions/project", {project: projectId});
+    if (!result.cancelled) { nativeAction("projects-changed"); await refresh(true); }
+  } catch (failure) { error(failure.message); }
+});
+if (nativeAPI) {
+  $("#folder-picker-row").hidden = false;
+  const input = $("#project-form [name=root]"); input.readOnly = true;
+  input.previousElementSibling.dataset.i18n = "projectFolder";
+  input.dataset.i18nPlaceholder = "chooseFolderHint";
+}
 function openConnectionDialog(event) {
   if ($("#project-dialog").open) return;
   $("#project-form .form-error").textContent = "";

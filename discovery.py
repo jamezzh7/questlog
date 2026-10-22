@@ -26,9 +26,9 @@ def registry_json(path):
     return data if isinstance(data, dict) else {}
 
 
-def codex_roots(home):
+def codex_roots(home, registry_file=None):
     directory = Path(os.environ.get("CODEX_HOME", str(home / ".codex"))).expanduser()
-    state = registry_json(directory / ".codex-global-state.json")
+    state = registry_json(Path(registry_file) if registry_file else directory / ".codex-global-state.json")
     projects = state.get("local-projects", {})
     rows = projects.values() if isinstance(projects, dict) else projects if isinstance(projects, list) else []
     roots = []
@@ -48,12 +48,12 @@ def codex_roots(home):
     return roots
 
 
-def claude_roots(home):
-    state = registry_json(home / ".claude.json")
+def claude_roots(home, registry_file=None):
+    state = registry_json(Path(registry_file) if registry_file else home / ".claude.json")
     projects = state.get("projects", {})
     roots = [(path, None) for path in projects] if isinstance(projects, dict) else []
     directory = Path(os.environ.get("CLAUDE_CONFIG_DIR", str(home / ".claude"))).expanduser() / "projects"
-    if directory.is_dir():
+    if registry_file is None and directory.is_dir():
         for folder in sorted(directory.iterdir())[:300]:
             if folder.is_symlink() or not folder.is_dir():
                 continue
@@ -116,11 +116,13 @@ def find_task_files(root):
     return sorted(candidates, key=lambda item: (-item["score"], item["file"]))
 
 
-def discover_projects(provider, config, home=None):
+def discover_projects(provider, config, home=None, registry_file=None, authorized_roots=None):
     if provider not in {"codex", "claude"}:
         raise ValueError("请选择 Codex 或 Claude Code")
+    if authorized_roots is not None and registry_file is None:
+        return {"provider": provider, "projects": [], "needsPermission": True}
     home = Path(home) if home else Path.home()
-    roots = codex_roots(home) if provider == "codex" else claude_roots(home)
+    roots = codex_roots(home, registry_file) if provider == "codex" else claude_roots(home, registry_file)
     connected = {str(Path(p["root"]).expanduser().resolve()): p["id"] for p in config["projects"]}
     projects, seen = [], set()
     for path, label in roots:
@@ -130,11 +132,12 @@ def discover_projects(provider, config, home=None):
         if str(root) in seen:
             continue
         seen.add(str(root))
-        available = root.is_dir()
-        choices = find_task_files(root) if available and str(root) not in connected else []
+        needs_grant = authorized_roots is not None and not any(root.is_relative_to(Path(grant).resolve()) for grant in authorized_roots)
+        available = needs_grant or root.is_dir()
+        choices = find_task_files(root) if available and not needs_grant and str(root) not in connected else []
         projects.append({"id": hashlib.sha256(f"{provider}:{root}".encode()).hexdigest()[:20],
                          "name": label if isinstance(label, str) and label else root.name,
-                         "root": str(root), "available": available,
+                         "root": str(root), "available": available, "requiresAuthorization": needs_grant,
                          "connectedId": connected.get(str(root)),
                          "tasksFile": choices[0]["file"] if choices else None,
                          "primaryIds": choices[0]["primaryIds"] if choices else [],
@@ -142,11 +145,13 @@ def discover_projects(provider, config, home=None):
     return {"provider": provider, "projects": projects}
 
 
-def connect_discovered(config, provider, identity, home=None):
-    candidates = discover_projects(provider, config, home)["projects"]
+def connect_discovered(config, provider, identity, home=None, **options):
+    candidates = discover_projects(provider, config, home, **options)["projects"]
     selected = next((project for project in candidates if project["id"] == identity), None)
     if not selected or not selected["available"]:
         raise ValueError("该项目目录已不可用，请刷新项目列表")
+    if selected.get("requiresAuthorization"):
+        raise PermissionError("请先授权访问该项目目录")
     if selected["connectedId"]:
         return {"id": selected["connectedId"], "alreadyConnected": True}
     project = {"id": hashlib.sha256(selected["root"].encode()).hexdigest()[:16],

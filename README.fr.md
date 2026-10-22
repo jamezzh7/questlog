@@ -39,6 +39,8 @@ Les captures montrent l’interface en anglais et le projet fictif [Orbit](examp
 
 ### Prérequis
 
+La première version Mac App Store est en préparation. Elle embarque son environnement et demande un accès en lecture seule aux dossiers via macOS. Consultez le [guide Xcode](docs/mac-app-store.md). Le lanceur depuis les sources reste disponible ci-dessous ; aucun téléchargement sur le store n’est encore publié.
+
 - macOS **13 ou version ultérieure**.
 - Python **3.9 ou version ultérieure**, accessible avec `python3`.
 - Les **Command Line Tools** d’Apple, dont `swiftc` et `codesign`.

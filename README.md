@@ -39,6 +39,8 @@ Screenshots use the fictional [Orbit example](examples/orbit/tasks.md), with no 
 
 ### Requirements
 
+The sandboxed Mac App Store target is being prepared for its first release. It embeds its runtime and requests read-only folder access through macOS. See the [Xcode build guide](docs/mac-app-store.md). The source launcher below remains available; there is no published store download yet.
+
 - macOS **13 or later**.
 - Python **3.9 or later**, available as `python3`.
 - Apple **Command Line Tools**, including `swiftc` and `codesign`.

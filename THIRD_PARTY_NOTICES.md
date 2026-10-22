@@ -1,6 +1,12 @@
 # Third-party notices
 
-Questlog's source code is offered under the [MIT license](LICENSE). No third-party source packages are bundled with its Python or JavaScript runtime code.
+Questlog's own source code is offered under the [MIT license](LICENSE). The web interface uses no third-party JavaScript packages.
+
+## Embedded Python in the store build
+
+The Xcode target embeds CPython 3.13 and its standard library from the builder's explicitly selected Python.org installation. CPython and its incorporated components retain their own licenses. `Python.framework/Resources/Python-LICENSE.txt` and `Python-History-and-Licenses.txt` preserve the matching installation's license and third-party notices, including the OpenSSL Apache 2.0 terms. The source launcher built with `build_app.py` uses an external Python installation instead.
+
+Questlog relocates the framework's dynamic-library references and omits site-packages, bytecode caches, development tools, GUI modules, curses extensions and tests. It does not modify CPython's implementation. See [Python's license](https://docs.python.org/3.13/license.html). No Python.org framework binaries are committed to this repository.
 
 ## Apple platform assets
 
