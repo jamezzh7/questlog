@@ -99,7 +99,7 @@ def task_groups(tasks):
     return result
 
 
-def add_context(result, config, include_context):
+def add_context(result, config, include_context, activity_reader=None):
     # The widget never scans documentation or Git. Context exists only in details.
     result.update({"context": [], "handoff": None, "activity": []})
     if include_context:
@@ -110,11 +110,11 @@ def add_context(result, config, include_context):
             if document["path"] not in seen:
                 result["sources"].append({key: document[key] for key in ("file", "path", "modified")})
                 seen.add(document["path"])
-        result["activity"] = git_activity(Path(config["root"]).expanduser().resolve())
+        result["activity"] = (activity_reader or git_activity)(Path(config["root"]).expanduser().resolve())
     return result
 
 
-def get_progress(config, include_context=True):
+def get_progress(config, include_context=True, activity_reader=None):
     root = Path(config["root"]).expanduser().resolve()
     if config.get("autoTasks") and not config.get("tasksFile"):
         from discovery import find_task_files
@@ -130,7 +130,7 @@ def get_progress(config, include_context=True):
                     "eta": {"available": False, "label": "未建立计划", "detail": "已连接项目，尚未发现 Markdown 任务清单"},
                     "estimates": {}, "hoursPerDay": config.get("hoursPerDay", 4), "sources": [], "handoff": None,
                     "activity": [], "revision": "no-plan", "checkedAt": datetime.now(timezone.utc).isoformat(),
-                    "method": "尚无任务清单，暂不计算完成比例。发现任务清单后会自动开始跟踪。"}, config, include_context)
+                    "method": "尚无任务清单，暂不计算完成比例。发现任务清单后会自动开始跟踪。"}, config, include_context, activity_reader)
     path = source_path(root, config["tasksFile"])
     content = read_document(path)
     from work_structure import collect_work_structure
@@ -187,4 +187,4 @@ def get_progress(config, include_context=True):
             "hoursPerDay": config.get("hoursPerDay", 4), "sources": sources, "revision": work["revision"],
             "checkedAt": datetime.now(timezone.utc).isoformat(),
             "method": "主清单独立计数；模块按任务原文状态展示，不推算模块百分比。" if work["groups"] else "主清单等权计数；阶段子任务单独统计。百分比不代表工时完成度。" if supplemental else
-                      "任务按文档章节分组；每项仅计数一次。百分比不代表工时完成度。"}, config, include_context)
+                      "任务按文档章节分组；每项仅计数一次。百分比不代表工时完成度。"}, config, include_context, activity_reader)

@@ -7,12 +7,14 @@ from pathlib import Path
 from progress import get_progress
 
 
-def load_summary(config_path, project_id=None):
+def load_summary(config_path, project_id=None, authorize=None):
     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
     projects = config["projects"]
     if not projects:
         return {"language": config.get("language", "auto"), "projects": [], "project": None}
     project = next((p for p in projects if p["id"] == project_id), projects[0])
+    if authorize:
+        authorize(project["root"])
     progress = get_progress(project, include_context=False)
     current = progress["current"]
     return {"language": config.get("language", "auto"), "projects": [{"id": p["id"], "name": p["name"]} for p in projects],

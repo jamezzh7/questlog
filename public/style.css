@@ -33,7 +33,7 @@ h1 { font-size: 25px; line-height: 1.25; letter-spacing: -.6px; font-weight: 650
 h2 { font-size: 15px; line-height: 1.4; font-weight: 600; }
 h3 { font-size: 14px; font-weight: 600; }
 .sr-only { position: absolute; top: 0; left: 0; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.symbol { display: inline-block; flex: 0 0 auto; width: 20px; height: 20px; background: currentColor; -webkit-mask-image: url('/icons.png'); mask-image: url('/icons.png'); -webkit-mask-size: 240px 20px; mask-size: 240px 20px; vertical-align: middle; }
+.symbol { display: inline-block; flex: 0 0 auto; width: 20px; height: 20px; background: currentColor; -webkit-mask-image: url('icons.png'); mask-image: url('icons.png'); -webkit-mask-size: 240px 20px; mask-size: 240px 20px; vertical-align: middle; }
 .icon-project { -webkit-mask-position: 0 0; mask-position: 0 0; }
 .icon-plus { -webkit-mask-position: -20px 0; mask-position: -20px 0; }
 .icon-close { -webkit-mask-position: -40px 0; mask-position: -40px 0; }

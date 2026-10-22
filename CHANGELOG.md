@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0 — Mac App Store preparation
+
+- Add a sandboxed Xcode target with an embedded, isolated CPython runtime and an in-process details API.
+- Request read-only project and optional tool-index grants through system pickers; retain bookmarks and allow permission reset and recovery.
+- Share API validation with source builds, retain all three interface languages, and read optional Git context without launching Git in the store build.
+- Add privacy/support documents, runtime notices, submission copy and a real-interface screenshot workflow. Store release remains pending App Review.
+
 ## 0.11.0
 
 - Add French across the native widget, menus, detail interface, errors, and accessibility labels.

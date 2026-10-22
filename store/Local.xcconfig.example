@@ -1,0 +1,2 @@
+// Copy to Local.xcconfig and choose your team in Xcode. Never commit credentials.
+DEVELOPMENT_TEAM = YOUR_TEAM_ID

@@ -39,6 +39,8 @@ Questlog 读取项目里已有的任务文档。平时只占一个 **300 × 120 
 
 ### 环境要求
 
+Mac App Store 沙盒版本正在准备首发，已内嵌运行环境，并通过 macOS 系统选择器请求目录只读访问。构建方式见 [Xcode 说明](docs/mac-app-store.md)。下方源码启动方式继续保留；目前还没有已发布的商店下载。
+
 - macOS **13 及以上**。
 - 可通过 `python3` 使用的 Python **3.9 及以上**。
 - Apple **Command Line Tools**，包括 `swiftc` 和 `codesign`。

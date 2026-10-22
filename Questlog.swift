@@ -269,6 +269,9 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     var lastReadAt = Date.distantPast
     var autoPlanPolling = false
     var settings: [String: String] = [:]
+    #if APP_STORE
+    var storeRuntime: StoreRuntime?
+    #endif
     var languagePreference = "auto"
     var language: InterfaceLanguage { InterfaceLanguage.resolve(languagePreference) }
     func localized(_ chinese: String, _ englishText: String, _ french: String) -> String {
@@ -310,8 +313,13 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         do {
+            #if APP_STORE
+            let runtime = try StoreRuntime(); runtime.owner = self; storeRuntime = runtime
+            settings = ["config": runtime.configuration.path]
+            #else
             let file = Bundle.main.resourceURL!.appendingPathComponent("runtime.json")
             settings = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: file))
+            #endif
             if let path = settings["config"], let bytes = try? Data(contentsOf: URL(fileURLWithPath: path)),
                let config = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any] {
                 languagePreference = config["language"] as? String ?? "auto"
@@ -355,6 +363,9 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         appMenu.addItem(withTitle: localized("显示进度条", "Show widget", "Afficher la mini-fenêtre"), action: #selector(showWidget), keyEquivalent: "0")
         appMenu.addItem(withTitle: localized("打开详情", "Open details", "Ouvrir les détails"), action: #selector(openDetails), keyEquivalent: "d")
         appMenu.addItem(withTitle: localized("刷新进度", "Refresh progress", "Actualiser l’avancement"), action: #selector(forceRefresh), keyEquivalent: "r")
+        #if STORE_SCREENSHOTS
+        appMenu.addItem(withTitle: "Save Store Screenshot", action: #selector(saveStoreScreenshot), keyEquivalent: "s")
+        #endif
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: localized("退出 Questlog", "Quit Questlog", "Quitter Questlog"), action: #selector(quit), keyEquivalent: "q")
         appItem.submenu = appMenu
@@ -375,6 +386,24 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         updateNativeLabels()
     }
     @objc func forceRefresh() { refreshSummary(force: true) }
+    #if STORE_SCREENSHOTS
+    @objc func saveStoreScreenshot() {
+        guard let web = webView, let directory = storeRuntime?.directory.appendingPathComponent("Screenshots") else { return }
+        let snapshot = WKSnapshotConfiguration(); snapshot.rect = web.bounds
+        snapshot.afterScreenUpdates = true
+        let name = "details-\(language.rawValue).png"
+        web.takeSnapshot(with: snapshot) { image, error in
+            do {
+                guard let tiff = image?.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff),
+                      let png = bitmap.representation(using: .png, properties: [:]) else {
+                    throw error ?? StoreFailure(message: "Unable to capture store screenshot")
+                }
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                try png.write(to: directory.appendingPathComponent(name), options: .atomic)
+            } catch { self.showFailure(error.localizedDescription) }
+        }
+    }
+    #endif
     func sourceSignature() -> String {
         autoPlanPolling = false
         guard let configPath = settings["config"], let bytes = try? Data(contentsOf: URL(fileURLWithPath: configPath)) else { return "missing" }
@@ -384,6 +413,9 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
             let preference = config["language"] as? String ?? "auto"
             if languagePreference != preference { languagePreference = preference; setupMenu(); updateNativeLabels() }
             for project in projects where selectedID == nil || project["id"] as? String == selectedID {
+                #if APP_STORE
+                guard let root = project["root"] as? String, storeRuntime?.access.contains(root) == true else { stamp += "/ungranted"; continue }
+                #endif
                 if project["autoTasks"] as? Bool == true && project["tasksFile"] as? String == nil { autoPlanPolling = true }
                 if let root = project["root"] as? String, let relative = project["tasksFile"] as? String {
                     let path = URL(fileURLWithPath: (root as NSString).expandingTildeInPath).appendingPathComponent(relative).path
@@ -394,6 +426,9 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
             }
         }
         for path in watchedSourceFiles {
+            #if APP_STORE
+            guard storeRuntime?.access.contains(path) == true else { continue }
+            #endif
             if let attributes = try? FileManager.default.attributesOfItem(atPath: path) {
                 stamp += "/\(path):\(attributes[.modificationDate] ?? "")/\(attributes[.size] ?? "")"
             } else { stamp += "/\(path):missing" }
@@ -401,48 +436,53 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         return stamp
     }
     func refreshSummary(force: Bool = false) {
-        guard !reading, !exiting, let python = settings["python"], let config = settings["config"] else { return }
+        guard !reading, !exiting else { return }
         let signature = sourceSignature()
         guard force || signature != lastSignature || (autoPlanPolling && Date().timeIntervalSince(lastReadAt) >= 30) else { return }
-        reading = true
-        lastReadAt = Date()
+        reading = true; lastReadAt = Date()
         let project = selectedID
-        DispatchQueue.global(qos: .utility).async { [weak self] in
+        let finish: (Result<Data, Error>) -> Void = { [weak self] result in
             guard let self = self else { return }
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: python)
+            self.reading = false
+            guard self.selectedID == project else { self.refreshSummary(force: true); return }
+            self.lastSignature = signature
+            do {
+                let bytes = try result.get()
+                let summary = try JSONDecoder().decode(SummaryResponse.self, from: bytes)
+                self.apply(summary)
+            } catch {
+                #if APP_STORE
+                self.widget.setProgressValue(nil); self.widget.track.setProgress(0, animated: false)
+                self.widget.scope.stringValue = ""; self.widget.eta.stringValue = ""
+                self.widget.track.setAccessibilityElement(false)
+                self.displayedProjectID = nil; self.watchedSourceFiles = []
+                #endif
+                self.widget.stage.stringValue = self.localized("暂时无法读取 · ⌘R 重试", "Unable to read · ⌘R to retry", "Lecture impossible · réessayer avec ⌘R")
+                self.widget.stage.toolTip = self.localizedError(error.localizedDescription)
+            }
+        }
+        #if APP_STORE
+        storeRuntime?.summary(project: project, completion: finish)
+        #else
+        guard let python = settings["python"], let config = settings["config"] else { reading = false; return }
+        DispatchQueue.global(qos: .utility).async {
+            let process = Process(); process.executableURL = URL(fileURLWithPath: python)
             process.arguments = [Bundle.main.resourceURL!.appendingPathComponent("read_summary.py").path, "--config", config]
             if let project = project { process.arguments! += ["--project", project] }
             var environment = ProcessInfo.processInfo.environment
-            environment["PYTHONDONTWRITEBYTECODE"] = "1"
-            process.environment = environment
-            let output = Pipe()
-            process.standardOutput = output; process.standardError = FileHandle.nullDevice
+            environment["PYTHONDONTWRITEBYTECODE"] = "1"; process.environment = environment
+            let output = Pipe(); process.standardOutput = output; process.standardError = FileHandle.nullDevice
             do {
                 try process.run()
-                let bytes = output.fileHandleForReading.readDataToEndOfFile()
-                process.waitUntilExit()
-                if process.terminationStatus != 0,
-                   let failure = try? JSONSerialization.jsonObject(with: bytes) as? [String: String] {
-                    throw NSError(domain: "Questlog", code: 1, userInfo: [NSLocalizedDescriptionKey: failure["error"] ?? "读取失败"])
+                let bytes = output.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
+                if process.terminationStatus != 0 {
+                    let failure = try? JSONSerialization.jsonObject(with: bytes) as? [String: String]
+                    throw NSError(domain: "Questlog", code: 1, userInfo: [NSLocalizedDescriptionKey: failure?["error"] ?? "读取失败"])
                 }
-                let summary = try JSONDecoder().decode(SummaryResponse.self, from: bytes)
-                DispatchQueue.main.async {
-                    self.reading = false
-                    guard self.selectedID == project else { self.refreshSummary(force: true); return }
-                    self.lastSignature = signature
-                    self.apply(summary)
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.reading = false
-                    guard self.selectedID == project else { self.refreshSummary(force: true); return }
-                    self.lastSignature = signature
-                    self.widget.stage.stringValue = error.localizedDescription == "尚未连接项目" ? self.localized("点击 ↗ 连接项目", "Connect a project ↗", "Connecter un projet ↗") : self.localized("暂时无法读取 · ⌘R 重试", "Unable to read · ⌘R to retry", "Lecture impossible · réessayer avec ⌘R")
-                    self.widget.stage.toolTip = self.localizedError(error.localizedDescription)
-                }
-            }
+                DispatchQueue.main.async { finish(.success(bytes)) }
+            } catch { DispatchQueue.main.async { finish(.failure(error)) } }
         }
+        #endif
     }
     func apply(_ response: SummaryResponse) {
         let preference = response.language ?? "auto"
@@ -543,10 +583,23 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         let config = WKWebViewConfiguration()
         config.preferences.tabFocusesLinks = true
         config.userContentController.add(self, name: "questlog")
+        #if APP_STORE
+        if let runtime = storeRuntime {
+            config.userContentController.addScriptMessageHandler(runtime, contentWorld: .page, name: "questlogAPI")
+        }
+        #endif
         let web = WKWebView(frame: .zero, configuration: config)
         webView = web
+        #if APP_STORE
+        web.navigationDelegate = storeRuntime
+        #endif
         let area = window.screen?.visibleFrame ?? NSScreen.main!.visibleFrame
-        let details = NSWindow(contentRect: NSRect(x: 0, y: 0, width: min(1000, area.width - 60), height: min(760, area.height - 60)),
+        #if STORE_SCREENSHOTS
+        let detailsSize = NSSize(width: 1280, height: 800)
+        #else
+        let detailsSize = NSSize(width: min(1000, area.width - 60), height: min(760, area.height - 60))
+        #endif
+        let details = NSWindow(contentRect: NSRect(origin: .zero, size: detailsSize),
                                styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         details.title = localized("Questlog · 项目详情", "Questlog · Project details", "Questlog · Détails du projet")
         details.titleVisibility = .hidden; details.titlebarAppearsTransparent = true
@@ -564,9 +617,22 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         content.addSubview(dragView); detailsDragView = dragView
         details.isReleasedWhenClosed = false; details.delegate = self; details.contentView = content
         details.center(); detailsWindow = details; reveal(details); window.orderOut(nil)
+        #if APP_STORE
+        if let directory = storeRuntime?.resources.appendingPathComponent("public") {
+            let rules = "[{\"trigger\":{\"url-filter\":\"^https?://\"},\"action\":{\"type\":\"block\"}}]"
+            WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "questlog-local-content", encodedContentRuleList: rules) { [weak self, weak web] rule, error in
+                guard let web = web, self?.webView === web else { return }
+                guard let rule = rule else { self?.showFailure(error?.localizedDescription ?? "Unable to configure local content"); return }
+                web.configuration.userContentController.add(rule)
+                web.loadFileURL(directory.appendingPathComponent("index.html"), allowingReadAccessTo: directory)
+            }
+        }
+        #else
         web.loadHTMLString("<html><body style='font:12px -apple-system;background:#f8fafd;color:#7b8798;padding:55px 25px'>\(localized("正在读取项目详情…", "Reading project details…", "Lecture des détails du projet…"))</body></html>", baseURL: nil)
         launchService()
+        #endif
     }
+    #if !APP_STORE
     func launchService() {
         serviceGeneration += 1
         let generation = serviceGeneration
@@ -602,10 +668,14 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         service = process
         do { try process.run() } catch { showFailure("\(localized("无法打开详情", "Unable to open details", "Impossible d’ouvrir les détails")): \(error.localizedDescription)") }
     }
+    #endif
     func stopDetails() {
         serviceGeneration += 1
         webView?.stopLoading()
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "questlog")
+        #if APP_STORE
+        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "questlogAPI", contentWorld: .page)
+        #endif
         detailsWindow?.delegate = nil; detailsWindow?.close(); detailsWindow?.contentView = nil
         detailsWindow = nil; webView = nil; detailsDragView = nil
         if let process = service, process.isRunning { process.terminate(); process.waitUntilExit() }
@@ -616,6 +686,9 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     }
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame else { return }
+        #if APP_STORE
+        guard storeRuntime?.trusted(message) == true else { return }
+        #endif
         if let layout = message.body as? [String: Any], layout["action"] as? String == "window-drag-regions" {
             detailsDragView?.update(from: layout); return
         }
@@ -650,7 +723,15 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
            let image = NSImage(contentsOf: file) { NSApp.applicationIconImage = image }
     }
 }
-let app = NSApplication.shared
-let delegate = CompanionApp()
-app.delegate = delegate
-app.run()
+@main
+enum QuestlogApplication {
+    static func main() {
+        #if APP_STORE
+        if CommandLine.arguments.contains("--store-smoke") { exit(StoreRuntime.smoke()) }
+        #endif
+        let app = NSApplication.shared
+        let delegate = CompanionApp()
+        app.delegate = delegate
+        app.run()
+    }
+}

@@ -9,3 +9,11 @@ Questlog.app/
 artifacts/
 projects.json
 .projects-*.json
+.build/
+build-store/
+*.xcarchive/
+*.pkg
+xcuserdata/
+*.xcuserstate
+store/Local.xcconfig
+com.apple.DeveloperTools/
