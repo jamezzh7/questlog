@@ -7,6 +7,25 @@ from pathlib import Path
 from progress import get_progress
 
 
+def load_project_overview(config_path, authorize=None):
+    """Read connected checklists independently; never read context or Git."""
+    config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    rows = []
+    for project in config["projects"]:
+        row = {"id": project["id"], "name": project["name"], "overall": None, "state": "unavailable"}
+        try:
+            if authorize:
+                authorize(project["root"])
+            progress = get_progress(project, include_context=False)
+            row.update(overall=progress["overall"], state="ready" if progress["overall"]["total"] else "no-plan")
+        except PermissionError:
+            row["state"] = "permission"
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+        rows.append(row)
+    return {"language": config.get("language", "auto"), "projects": rows}
+
+
 def load_summary(config_path, project_id=None, authorize=None):
     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
     projects = config["projects"]
@@ -30,9 +49,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument("--project")
+    parser.add_argument("--overview", action="store_true")
     args = parser.parse_args()
     try:
-        print(json.dumps(load_summary(args.config, args.project), ensure_ascii=False))
+        result = load_project_overview(args.config) if args.overview else load_summary(args.config, args.project)
+        print(json.dumps(result, ensure_ascii=False))
     except (OSError, ValueError, KeyError) as error:
         print(json.dumps({"error": str(error)}, ensure_ascii=False))
         raise SystemExit(1)

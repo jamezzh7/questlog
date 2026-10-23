@@ -26,6 +26,7 @@ Screenshots use the fictional [Orbit example](examples/orbit/tasks.md), with no 
 
 ## Features
 
+- **Menu bar overview** — click the Questlog icon to compare connected projects, open a project, or show and hide the widget.
 - **A small native window.** Drag it where you like, optionally pin it on the current desktop, and expand it for details.
 - **Bring your own Markdown.** Read checklists, document sections, milestones, linked module plans, task headings, and Task/Status tables.
 - **Connect local projects.** Discover project directories from Codex or Claude Code metadata, or select a directory manually.
@@ -100,6 +101,7 @@ The app writes its own connection, language, scope, and estimate settings. It do
 
 | Shortcut | Action |
 | --- | --- |
+| `⌘1` | All project progress |
 | `⌘D` | Open details |
 | `⌘0` | Return to the widget |
 | `⌘R` | Refresh |
@@ -107,7 +109,7 @@ The app writes its own connection, language, scope, and estimate settings. It do
 | `Tab` / `Shift-Tab` | Move between controls |
 | `Escape` | Close a menu or dialog |
 
-Right-click the widget to switch projects. Closing the detail window returns to the widget; the widget's close button quits the app.
+Right-click the widget to switch projects. Closing the detail window returns to the widget; the widget's close button hides it. Questlog stays available in the menu bar. Use the popover’s power button or `⌘Q` to quit.
 
 ## Development
 

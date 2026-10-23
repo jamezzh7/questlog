@@ -10,7 +10,7 @@ import uuid
 from urllib.parse import parse_qs, urlsplit
 from progress import get_progress, parse_tasks, read_document, source_path
 from discovery import connect_discovered, discover_projects, find_task_files, primary_ids
-from read_summary import load_summary
+from read_summary import load_summary, load_project_overview
 
 LOCK = threading.RLock()
 
@@ -112,6 +112,8 @@ class LocalAPI:
             return {"root": candidate["root"]}
         if endpoint == "/api/summary":
             return load_summary(self.config_path, query.get("project", [None])[0], authorize=self.authorize)
+        if endpoint == "/api/project-overview":
+            return load_project_overview(self.config_path, authorize=self.authorize)
         if endpoint not in {"/api/progress", "/api/sources", "/api/document"}:
             raise MissingResource("未找到")
         project = next((p for p in config["projects"] if p["id"] == query.get("project", [None])[0]), None)

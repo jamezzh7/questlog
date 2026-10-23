@@ -29,7 +29,7 @@ shutil.copy2(ROOT / "assets/AppIcon.icns", RESOURCES / "AppIcon.icns")
 with (CONTENTS / "Info.plist").open("wb") as stream:
     plistlib.dump({"CFBundleName": "Questlog", "CFBundleDisplayName": "Questlog",
                   "CFBundleIdentifier": "local.questlog.companion", "CFBundleExecutable": "Questlog",
-                  "CFBundlePackageType": "APPL", "CFBundleShortVersionString": "0.12.0", "CFBundleVersion": "0.12.0",
+                  "CFBundlePackageType": "APPL", "CFBundleShortVersionString": "0.13.0", "CFBundleVersion": "0.13.0",
                   "CFBundleIconFile": "AppIcon.icns",
                   "LSApplicationCategoryType": "public.app-category.productivity",
                   "CFBundleDevelopmentRegion": "en", "CFBundleLocalizations": ["en", "zh-Hans", "fr"],

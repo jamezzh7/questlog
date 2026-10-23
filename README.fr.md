@@ -26,6 +26,7 @@ Les captures montrent l’interface en anglais et le projet fictif [Orbit](examp
 
 ## Fonctionnalités
 
+- **Vue d’ensemble dans la barre des menus** — cliquez sur l’icône Questlog pour consulter les projets connectés, ouvrir leurs détails ou afficher et masquer le widget.
 - **Une petite fenêtre native.** Déplacez-la où vous le souhaitez, épinglez-la sur le bureau actuel si nécessaire et ouvrez les détails à la demande.
 - **Vos propres plans Markdown.** Consultez les listes à cocher, sections, étapes, plans de modules liés, titres de tâches et tableaux Task/Status.
 - **Des projets locaux.** Retrouvez les dossiers de projets à partir des métadonnées de Codex ou de Claude Code, ou connectez un dossier manuellement.
@@ -100,6 +101,7 @@ L’application enregistre ses propres réglages de connexion, de langue, de pé
 
 | Raccourci | Action |
 | --- | --- |
+| `⌘1` | Avancement des projets |
 | `⌘D` | Ouvrir les détails |
 | `⌘0` | Revenir au widget |
 | `⌘R` | Actualiser |
@@ -107,7 +109,7 @@ L’application enregistre ses propres réglages de connexion, de langue, de pé
 | `Tab` / `Shift-Tab` | Passer d’un contrôle à l’autre |
 | `Escape` | Fermer un menu ou une boîte de dialogue |
 
-Un clic droit sur le widget permet de changer de projet. Fermer la fenêtre de détails ramène au widget ; le bouton de fermeture du widget quitte l’application.
+Un clic droit sur le widget permet de changer de projet. Fermer la fenêtre de détails ramène au widget ; le bouton de fermeture du widget le masque. Questlog reste accessible dans la barre des menus. Utilisez le bouton d’alimentation du panneau ou `⌘Q` pour quitter.
 
 ## Développement
 

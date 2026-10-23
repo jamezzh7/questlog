@@ -37,6 +37,10 @@ struct ProjectSummary: Decodable {
     let work: WorkOverview?; let watchFiles: [String]?; let warning: String?; let warnings: [WorkWarning]?
 }
 struct SummaryResponse: Decodable { let language: String?; let projects: [ProjectChoice]; let project: ProjectSummary? }
+struct MenuProject: Decodable {
+    let id: String; let name: String; let overall: ProgressCount?; let state: String
+}
+struct ProjectOverview: Decodable { let language: String?; let projects: [MenuProject] }
 
 final class CompanionWindow: NSWindow {
     override var canBecomeKey: Bool { true }
@@ -248,7 +252,138 @@ final class WidgetView: NSView {
     }
 }
 
-final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMessageHandler {
+final class ProgressRing: NSView {
+    var percent: Int? { didSet { needsDisplay = true } }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func draw(_ dirtyRect: NSRect) {
+        let circle = bounds.insetBy(dx: 3, dy: 3)
+        let track = NSBezierPath(ovalIn: circle); track.lineWidth = 3
+        NSColor.labelColor.withAlphaComponent(0.10).setStroke(); track.stroke()
+        guard let percent = percent, percent > 0 else { return }
+        WidgetStyle.accent.setStroke()
+        if percent >= 100 { track.stroke(); return }
+        let arc = NSBezierPath(); arc.lineWidth = 3; arc.lineCapStyle = .round
+        arc.appendArc(withCenter: NSPoint(x: bounds.midX, y: bounds.midY), radius: circle.width / 2,
+                      startAngle: 90, endAngle: 90 - CGFloat(percent) * 3.6, clockwise: true)
+        arc.stroke()
+    }
+}
+class PopoverButton: NSButton {
+    override var acceptsFirstResponder: Bool { true }
+    override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
+    override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        if window?.firstResponder === self {
+            NSColor.keyboardFocusIndicatorColor.setStroke()
+            let focus = NSBezierPath(roundedRect: bounds.insetBy(dx: 3, dy: 3), xRadius: 5, yRadius: 5)
+            focus.lineWidth = 2; focus.stroke()
+        }
+    }
+}
+final class MenuProjectRow: PopoverButton {
+    let identity: String
+    private var hoverArea: NSTrackingArea?
+    init(project: MenuProject, subtitle: String, french: Bool, selected: Bool, width: CGFloat) {
+        identity = project.id
+        super.init(frame: NSRect(x: 0, y: 0, width: width, height: 66))
+        title = ""; isBordered = false; setButtonType(.momentaryChange)
+        wantsLayer = true; layer?.cornerRadius = 7; focusRingType = .exterior
+        let ring = ProgressRing(frame: NSRect(x: 12, y: 17, width: 32, height: 32))
+        let percent = project.overall.flatMap { $0.total > 0 ? $0.percent : nil }
+        ring.percent = percent; ring.setAccessibilityElement(false); addSubview(ring)
+        let name = PassiveLabel(labelWithString: project.name)
+        name.frame = NSRect(x: 56, y: 13, width: width - 140, height: 19)
+        name.font = .systemFont(ofSize: 13, weight: selected ? .semibold : .medium)
+        name.textColor = .labelColor; name.lineBreakMode = .byTruncatingTail
+        let detail = PassiveLabel(labelWithString: subtitle)
+        detail.frame = NSRect(x: 56, y: 35, width: width - 140, height: 16)
+        detail.font = .systemFont(ofSize: 11); detail.textColor = .secondaryLabelColor
+        detail.lineBreakMode = .byTruncatingTail
+        let value = PassiveLabel(labelWithString: percent.map { "\($0)\(french ? " %" : "%")" } ?? "—")
+        value.frame = NSRect(x: width - 76, y: 23, width: 62, height: 25)
+        value.font = .monospacedDigitSystemFont(ofSize: 19, weight: .regular)
+        value.textColor = percent == nil ? .secondaryLabelColor : .labelColor; value.alignment = .right
+        for label in [name, detail, value] { label.setAccessibilityElement(false); addSubview(label) }
+        toolTip = "\(project.name) · \(subtitle)"
+        setAccessibilityLabel("\(project.name), \(value.stringValue), \(subtitle)")
+        setAccessibilityIdentifier("project-overview-\(project.id)")
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override var acceptsFirstResponder: Bool { true }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let area = hoverArea { removeTrackingArea(area) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
+        addTrackingArea(area); hoverArea = area
+    }
+    override func mouseEntered(with event: NSEvent) { layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.055).cgColor }
+    override func mouseExited(with event: NSEvent) { layer?.backgroundColor = NSColor.clear.cgColor }
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 36 || event.keyCode == 76 { performClick(nil) } else { super.keyDown(with: event) }
+    }
+}
+final class FlippedProjectList: NSView { override var isFlipped: Bool { true } }
+final class ProjectPopoverView: NSView {
+    override var isFlipped: Bool { true }
+    let settingsButton = PopoverButton()
+    let addButton = PopoverButton()
+    let refreshButton = PopoverButton()
+    let quitButton = PopoverButton()
+    let widgetButton = PopoverButton()
+    let titleLabel = PassiveLabel(labelWithString: "Questlog")
+    let message = PassiveLabel(wrappingLabelWithString: "")
+    let scroll = NSScrollView()
+    let list = FlippedProjectList()
+    private let divider = NSBox()
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        let surface = NSVisualEffectView(frame: bounds)
+        surface.material = .popover; surface.blendingMode = .behindWindow; surface.state = .active
+        surface.autoresizingMask = [.width, .height]; addSubview(surface)
+        titleLabel.font = .systemFont(ofSize: 14, weight: .semibold); titleLabel.alignment = .center
+        titleLabel.textColor = .labelColor; addSubview(titleLabel)
+        message.font = .systemFont(ofSize: 12); message.textColor = .secondaryLabelColor
+        message.alignment = .center; addSubview(message)
+        scroll.drawsBackground = false; scroll.borderType = .noBorder
+        scroll.documentView = list; scroll.autohidesScrollers = true; addSubview(scroll)
+        divider.boxType = .separator; addSubview(divider)
+        for (button, symbol) in [(settingsButton, "gearshape"), (addButton, "plus"),
+                                  (refreshButton, "arrow.clockwise"), (quitButton, "power")] {
+            button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            button.imagePosition = .imageOnly; button.isBordered = false; button.bezelStyle = .inline
+            button.contentTintColor = .secondaryLabelColor; addSubview(button)
+        }
+        widgetButton.isBordered = false; widgetButton.bezelStyle = .inline
+        widgetButton.font = .systemFont(ofSize: 11); widgetButton.contentTintColor = .secondaryLabelColor
+        addSubview(widgetButton)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func layout() {
+        super.layout()
+        let width = bounds.width
+        settingsButton.frame = NSRect(x: 12, y: 12, width: 28, height: 26)
+        addButton.frame = NSRect(x: width - 40, y: 12, width: 28, height: 26)
+        titleLabel.frame = NSRect(x: 52, y: 15, width: width - 104, height: 21)
+        scroll.frame = NSRect(x: 6, y: 49, width: width - 12, height: bounds.height - 96)
+        message.frame = NSRect(x: 30, y: 66, width: width - 60, height: 62)
+        divider.frame = NSRect(x: 16, y: bounds.height - 43, width: width - 32, height: 1)
+        widgetButton.frame = NSRect(x: 14, y: bounds.height - 34, width: width - 110, height: 24)
+        refreshButton.frame = NSRect(x: width - 82, y: bounds.height - 34, width: 28, height: 24)
+        quitButton.frame = NSRect(x: width - 40, y: bounds.height - 34, width: 28, height: 24)
+    }
+    func replaceRows(_ rows: [MenuProjectRow], message text: String = "") {
+        list.subviews.forEach { $0.removeFromSuperview() }
+        for (index, row) in rows.enumerated() { row.frame.origin.y = CGFloat(index) * 66; list.addSubview(row) }
+        list.frame = NSRect(x: 0, y: 0, width: 348, height: CGFloat(rows.count) * 66)
+        scroll.hasVerticalScroller = rows.count > 6; scroll.isHidden = rows.isEmpty
+        message.stringValue = text; message.isHidden = !rows.isEmpty
+        frame.size.height = 96 + (rows.isEmpty ? 108 : CGFloat(min(rows.count, 6)) * 66)
+        needsLayout = true
+    }
+}
+
+final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMessageHandler, NSPopoverDelegate {
     var window: CompanionWindow!
     var widget = WidgetView(frame: NSRect(origin: .zero, size: WidgetStyle.size))
     var detailsWindow: NSWindow?
@@ -269,6 +404,16 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     var lastReadAt = Date.distantPast
     var autoPlanPolling = false
     var settings: [String: String] = [:]
+    var statusItem: NSStatusItem?
+    let projectPopover = NSPopover()
+    let projectPopoverView = ProjectPopoverView(frame: NSRect(x: 0, y: 0, width: 360, height: 204))
+    var overviewTimer: Timer?
+    var overviewReading = false
+    var overviewSnapshot: Data?
+    var overviewSelection: String?
+    var overviewKeyMonitor: Any?
+    var detailsReady = false
+    var pendingDetailsRoute: [String]?
     #if APP_STORE
     var storeRuntime: StoreRuntime?
     #endif
@@ -297,11 +442,22 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     func updateNativeLabels() {
         let pinLabel = pinned ? localized("置顶：已开启（仅当前桌面，不跨全屏）", "Pinned on this desktop; excluded from fullscreen", "Épinglé sur ce bureau ; masqué en plein écran") : localized("置顶：已关闭（仅当前桌面）", "Pin off; this desktop only", "Non épinglé ; uniquement sur ce bureau")
         widget.pin.toolTip = pinLabel; widget.pin.setAccessibilityLabel(pinLabel)
-        for (button, label) in [(widget.expand, localized("打开详情", "Open details", "Ouvrir les détails")), (widget.quit, localized("退出 Questlog", "Quit Questlog", "Quitter Questlog"))] {
+        for (button, label) in [(widget.expand, localized("打开详情", "Open details", "Ouvrir les détails")), (widget.quit, localized("隐藏小窗", "Hide widget", "Masquer la mini-fenêtre"))] {
             button.toolTip = label; button.setAccessibilityLabel(label)
         }
         window?.title = localized("Questlog · 项目进度", "Questlog · Project progress", "Questlog · Avancement du projet")
         detailsWindow?.title = localized("Questlog · 项目详情", "Questlog · Project details", "Questlog · Détails du projet")
+        statusItem?.button?.toolTip = localized("Questlog · 所有项目进度", "Questlog · All project progress", "Questlog · Avancement des projets")
+        statusItem?.button?.setAccessibilityLabel(localized("Questlog 项目进度", "Questlog project progress", "Avancement des projets Questlog"))
+        for (button, label) in [(projectPopoverView.settingsButton, localized("设置", "Settings", "Réglages")),
+                                (projectPopoverView.addButton, localized("连接项目", "Connect project", "Connecter un projet")),
+                                (projectPopoverView.refreshButton, localized("刷新进度", "Refresh progress", "Actualiser l’avancement")),
+                                (projectPopoverView.quitButton, localized("退出 Questlog", "Quit Questlog", "Quitter Questlog"))] {
+            button.toolTip = label; button.setAccessibilityLabel(label)
+        }
+        projectPopoverView.widgetButton.title = window?.isVisible == true
+            ? localized("隐藏小窗", "Hide widget", "Masquer la mini-fenêtre")
+            : localized("显示小窗", "Show widget", "Afficher la mini-fenêtre")
     }
     func reveal(_ target: NSWindow) {
         let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -341,7 +497,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.contentView = widget
-        for (button, action) in [(widget.pin, #selector(togglePin)), (widget.expand, #selector(openDetails)), (widget.quit, #selector(quit))] {
+        for (button, action) in [(widget.pin, #selector(togglePin)), (widget.expand, #selector(openDetails)), (widget.quit, #selector(hideWidget))] {
             button.target = self; button.action = action
         }
         if let area = NSScreen.main?.visibleFrame {
@@ -350,6 +506,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         updateNativeLabels()
         widget.stage.stringValue = localized("正在读取任务…", "Reading tasks…", "Lecture des tâches…")
         reveal(window)
+        setupStatusItem()
         NSApp.activate(ignoringOtherApps: true)
         refreshSummary(force: true)
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.refreshSummary() }
@@ -360,6 +517,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         let appItem = NSMenuItem()
         menu.addItem(appItem)
         let appMenu = NSMenu()
+        appMenu.addItem(withTitle: localized("所有项目进度", "All project progress", "Avancement des projets"), action: #selector(toggleProjectPopover), keyEquivalent: "1")
         appMenu.addItem(withTitle: localized("显示进度条", "Show widget", "Afficher la mini-fenêtre"), action: #selector(showWidget), keyEquivalent: "0")
         appMenu.addItem(withTitle: localized("打开详情", "Open details", "Ouvrir les détails"), action: #selector(openDetails), keyEquivalent: "d")
         appMenu.addItem(withTitle: localized("刷新进度", "Refresh progress", "Actualiser l’avancement"), action: #selector(forceRefresh), keyEquivalent: "r")
@@ -385,7 +543,127 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         widget.pin.selected = pinned
         updateNativeLabels()
     }
-    @objc func forceRefresh() { refreshSummary(force: true) }
+    @objc func forceRefresh() { refreshSummary(force: true); if projectPopover.isShown { refreshProjectOverview() } }
+    func setupStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+            NSColor.black.setFill()
+            for y: CGFloat in [5, 11] {
+                NSBezierPath(roundedRect: NSRect(x: 2, y: y, width: 14, height: 3), xRadius: 1.5, yRadius: 1.5).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        item.button?.image = image; item.button?.target = self; item.button?.action = #selector(toggleProjectPopover)
+        statusItem = item
+        let controller = NSViewController(); controller.view = projectPopoverView
+        projectPopover.contentViewController = controller; projectPopover.behavior = .transient; projectPopover.delegate = self
+        for (button, action) in [(projectPopoverView.settingsButton, #selector(openSettingsFromPopover)),
+                                  (projectPopoverView.addButton, #selector(connectFromPopover)),
+                                  (projectPopoverView.refreshButton, #selector(forceRefresh)),
+                                  (projectPopoverView.quitButton, #selector(quit)),
+                                  (projectPopoverView.widgetButton, #selector(toggleWidgetFromPopover))] {
+            button.target = self; button.action = action
+        }
+        updateNativeLabels()
+    }
+    @objc func toggleProjectPopover() {
+        guard let button = statusItem?.button else { return }
+        if projectPopover.isShown { projectPopover.performClose(nil); return }
+        updateNativeLabels()
+        overviewSnapshot = nil
+        projectPopoverView.replaceRows([], message: localized("正在读取项目进度…", "Reading project progress…", "Lecture de l’avancement…"))
+        projectPopover.contentSize = projectPopoverView.frame.size
+        projectPopover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        NSApp.activate(ignoringOtherApps: true)
+        projectPopover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        projectPopover.contentViewController?.view.window?.makeKey()
+        overviewKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self, self.projectPopover.isShown,
+                  event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return event }
+            if event.keyCode == 53 { self.projectPopover.performClose(nil); return nil }
+            let view = self.projectPopoverView
+            let controls: [NSButton] = [view.settingsButton] + view.list.subviews.compactMap { $0 as? MenuProjectRow } +
+                [view.addButton, view.widgetButton, view.refreshButton, view.quitButton]
+            guard let window = view.window else { return event }
+            if [48, 125, 126].contains(event.keyCode) {
+                let backwards = event.keyCode == 126 || (event.keyCode == 48 && event.modifierFlags.contains(.shift))
+                let current = controls.firstIndex { $0 === window.firstResponder }
+                let next = current.map { ($0 + (backwards ? controls.count - 1 : 1)) % controls.count } ?? (backwards ? controls.count - 1 : 0)
+                window.makeFirstResponder(controls[next]); controls[next].scrollToVisible(controls[next].bounds)
+                return nil
+            }
+            if [36, 49, 76].contains(event.keyCode), let control = window.firstResponder as? NSButton {
+                control.performClick(nil); return nil
+            }
+            return event
+        }
+        refreshProjectOverview()
+        overviewTimer?.invalidate()
+        overviewTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.refreshProjectOverview() }
+        overviewTimer?.tolerance = 1
+    }
+    func popoverDidClose(_ notification: Notification) {
+        overviewTimer?.invalidate(); overviewTimer = nil
+        if let monitor = overviewKeyMonitor { NSEvent.removeMonitor(monitor); overviewKeyMonitor = nil }
+    }
+    func refreshProjectOverview() {
+        guard projectPopover.isShown, !overviewReading, !exiting else { return }
+        overviewReading = true
+        let finish: (Result<Data, Error>) -> Void = { [weak self] result in
+            guard let self = self else { return }; self.overviewReading = false
+            guard self.projectPopover.isShown else { return }
+            do {
+                let bytes = try result.get()
+                let overview = try JSONDecoder().decode(ProjectOverview.self, from: bytes)
+                let preference = overview.language ?? "auto"
+                if preference != self.languagePreference { self.languagePreference = preference; self.setupMenu() }
+                self.updateNativeLabels()
+                if self.overviewSnapshot == bytes && self.overviewSelection == self.selectedID { return }
+                self.overviewSnapshot = bytes; self.overviewSelection = self.selectedID
+                let rows = overview.projects.map { project -> MenuProjectRow in
+                    let subtitle: String
+                    if project.state == "permission" { subtitle = self.localized("需要重新授权目录", "Folder access required", "Autorisation du dossier requise") }
+                    else if project.state == "unavailable" { subtitle = self.localized("暂时无法读取", "Unable to read", "Lecture impossible") }
+                    else if let progress = project.overall, progress.total > 0 {
+                        subtitle = self.localized("主清单 \(progress.done)/\(progress.total)", "Main list \(progress.done)/\(progress.total)", "Liste principale \(progress.done)/\(progress.total)")
+                    } else { subtitle = self.localized("尚无清单", "No checklist", "Aucune liste") }
+                    let row = MenuProjectRow(project: project, subtitle: subtitle, french: self.language == .fr,
+                                             selected: project.id == self.selectedID, width: overview.projects.count > 6 ? 332 : 348)
+                    row.target = self; row.action = #selector(self.openOverviewProject(_:)); return row
+                }
+                self.projectPopoverView.replaceRows(rows, message: self.localized("尚未连接项目\n点击 + 连接本地项目", "No projects connected\nChoose + to connect a local project", "Aucun projet connecté\nChoisissez + pour connecter un dossier"))
+            } catch {
+                self.overviewSnapshot = nil
+                self.projectPopoverView.replaceRows([], message: self.localized("暂时无法读取\n点击刷新重试", "Unable to read\nRefresh to try again", "Lecture impossible\nActualisez pour réessayer"))
+            }
+            self.projectPopover.contentSize = self.projectPopoverView.frame.size
+        }
+        #if APP_STORE
+        storeRuntime?.projectOverview(completion: finish)
+        #else
+        runSummaryBridge(["--overview"], completion: finish)
+        #endif
+    }
+    @objc func openOverviewProject(_ sender: MenuProjectRow) {
+        selectedID = sender.identity; refreshSummary(force: true)
+        openDetailsRoute(["project", sender.identity])
+    }
+    @objc func openSettingsFromPopover() { openDetailsRoute(["settings", ""]) }
+    @objc func connectFromPopover() { openDetailsRoute(["connect", ""]) }
+    func openDetailsRoute(_ route: [String]) {
+        pendingDetailsRoute = route; projectPopover.performClose(nil); openDetails(); deliverDetailsRoute()
+    }
+    func deliverDetailsRoute() {
+        guard detailsReady, let route = pendingDetailsRoute, let web = webView,
+              let data = try? JSONSerialization.data(withJSONObject: route), let arguments = String(data: data, encoding: .utf8) else { return }
+        pendingDetailsRoute = nil
+        web.evaluateJavaScript("window.questlogNavigate?.(...\(arguments)); undefined;")
+    }
+    @objc func hideWidget() { window.orderOut(nil); updateNativeLabels() }
+    @objc func toggleWidgetFromPopover() {
+        if window.isVisible { hideWidget() } else { projectPopover.performClose(nil); showWidget() }
+    }
     #if STORE_SCREENSHOTS
     @objc func saveStoreScreenshot() {
         guard let web = webView, let directory = storeRuntime?.directory.appendingPathComponent("Screenshots") else { return }
@@ -464,11 +742,17 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         #if APP_STORE
         storeRuntime?.summary(project: project, completion: finish)
         #else
-        guard let python = settings["python"], let config = settings["config"] else { reading = false; return }
+        runSummaryBridge(project.map { ["--project", $0] } ?? [], completion: finish)
+        #endif
+    }
+    #if !APP_STORE
+    func runSummaryBridge(_ arguments: [String], completion: @escaping (Result<Data, Error>) -> Void) {
+        guard let python = settings["python"], let config = settings["config"] else {
+            completion(.failure(NSError(domain: "Questlog", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to read local configuration"]))); return
+        }
         DispatchQueue.global(qos: .utility).async {
             let process = Process(); process.executableURL = URL(fileURLWithPath: python)
-            process.arguments = [Bundle.main.resourceURL!.appendingPathComponent("read_summary.py").path, "--config", config]
-            if let project = project { process.arguments! += ["--project", project] }
+            process.arguments = [Bundle.main.resourceURL!.appendingPathComponent("read_summary.py").path, "--config", config] + arguments
             var environment = ProcessInfo.processInfo.environment
             environment["PYTHONDONTWRITEBYTECODE"] = "1"; process.environment = environment
             let output = Pipe(); process.standardOutput = output; process.standardError = FileHandle.nullDevice
@@ -479,11 +763,11 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
                     let failure = try? JSONSerialization.jsonObject(with: bytes) as? [String: String]
                     throw NSError(domain: "Questlog", code: 1, userInfo: [NSLocalizedDescriptionKey: failure?["error"] ?? "读取失败"])
                 }
-                DispatchQueue.main.async { finish(.success(bytes)) }
-            } catch { DispatchQueue.main.async { finish(.failure(error)) } }
+                DispatchQueue.main.async { completion(.success(bytes)) }
+            } catch { DispatchQueue.main.async { completion(.failure(error)) } }
         }
-        #endif
     }
+    #endif
     func apply(_ response: SummaryResponse) {
         let preference = response.language ?? "auto"
         if languagePreference != preference { languagePreference = preference; setupMenu() }
@@ -579,7 +863,10 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         selectedID = sender.representedObject as? String; refreshSummary(force: true)
     }
     @objc func openDetails() {
+        projectPopover.performClose(nil)
+        NSApp.activate(ignoringOtherApps: true)
         if let details = detailsWindow { details.makeKeyAndOrderFront(nil); return }
+        detailsReady = false
         let config = WKWebViewConfiguration()
         config.preferences.tabFocusesLinks = true
         config.userContentController.add(self, name: "questlog")
@@ -670,6 +957,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     }
     #endif
     func stopDetails() {
+        detailsReady = false; pendingDetailsRoute = nil
         serviceGeneration += 1
         webView?.stopLoading()
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "questlog")
@@ -694,10 +982,12 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         }
         guard let action = message.body as? String else { return }
         if action == "quit" { NSApp.terminate(nil) }
+        else if action == "details-ready" { detailsReady = true; deliverDetailsRoute() }
         else if action == "compact" { showWidget() }
         else if action.hasPrefix("language:") { refreshSummary(force: true) }
         else if action == "projects-changed" { refreshSummary(force: true) }
         else if action.hasPrefix("project:") {
+            if pendingDetailsRoute?.first == "project" { return }
             let value = String(action.dropFirst(8))
             let id: String? = value.isEmpty ? nil : value
             if selectedID != id { selectedID = id; refreshSummary(force: true) }
@@ -705,14 +995,15 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         if sender === detailsWindow { showWidget(); return false }
-        NSApp.terminate(nil); return false
+        hideWidget(); return false
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { showWidget() }; return true
     }
     @objc func quit() { NSApp.terminate(nil) }
     func applicationWillTerminate(_ notification: Notification) {
-        exiting = true; timer?.invalidate(); stopDetails()
+        exiting = true; timer?.invalidate(); overviewTimer?.invalidate(); projectPopover.performClose(nil); stopDetails()
+        if let item = statusItem { NSStatusBar.system.removeStatusItem(item) }
     }
     func showFailure(_ message: String) {
         let alert = NSAlert(); alert.messageText = "Questlog"; alert.informativeText = message

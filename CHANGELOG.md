@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.0
+
+- Add a native menu bar popover with progress rings, checklist counts and percentages for all connected projects.
+- Open a project’s details directly, connect a project, open settings, refresh, or show and hide the widget from the popover.
+- Read overview data only while the popover is open; isolate unreadable projects and preserve keyboard focus when data has not changed.
+- Add English, Simplified Chinese and French labels, accessible project rows and a `⌘1` shortcut. The widget close button now hides it; quit remains available in the menu bar and with `⌘Q`.
+
 ## 0.12.0 — Mac App Store preparation
 
 - Add a sandboxed Xcode target with an embedded, isolated CPython runtime and an in-process details API.

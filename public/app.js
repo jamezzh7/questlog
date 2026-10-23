@@ -727,5 +727,13 @@ $("#language-select").addEventListener("change", async (event) => {
   finally { event.target.disabled = false; }
 });
 applyLanguage();
-start();
+if (native) {
+  window.questlogNavigate = async (action, identity) => {
+    for (const dialog of document.querySelectorAll("dialog[open]")) await closeDialog(dialog);
+    if (action === "project") await selectProject(projects.find((project) => project.id === identity)?.id || projects[0]?.id);
+    else if (action === "connect") $("#add-project").click();
+    else if (action === "settings") $("#settings").click();
+  };
+}
+start().then(() => nativeAction("details-ready"));
 setInterval(() => { if (projectId) refresh(); }, 5000);

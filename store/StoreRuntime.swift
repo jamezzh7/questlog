@@ -161,7 +161,13 @@ final class StoreRuntime: NSObject, WKScriptMessageHandlerWithReply, WKNavigatio
     }
     func summary(project: String?, completion: @escaping (Result<Data, Error>) -> Void) {
         let suffix = project.map { "?project=" + ($0.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "") } ?? ""
-        request("/api/summary" + suffix) { result in
+        readNativeData("/api/summary" + suffix, completion: completion)
+    }
+    func projectOverview(completion: @escaping (Result<Data, Error>) -> Void) {
+        readNativeData("/api/project-overview", completion: completion)
+    }
+    private func readNativeData(_ path: String, completion: @escaping (Result<Data, Error>) -> Void) {
+        request(path) { result in
             completion(result.flatMap { response in
                 do {
                     let body = response["body"] as? [String: Any] ?? [:]
