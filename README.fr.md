@@ -5,9 +5,9 @@
 <p align="center"><strong>Un compagnon discret pour suivre vos projets sur Mac.</strong><br>Vos plans Markdown locaux, dans une vue claire de ce qui avance.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/macOS-13%2B-333333?logo=apple&amp;logoColor=white" alt="macOS 13 ou version ultérieure">
-  <img src="https://img.shields.io/badge/Swift-AppKit-F05138?logo=swift&amp;logoColor=white" alt="Swift et AppKit">
-  <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9 ou version ultérieure">
+  <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-333333?logo=apple&amp;logoColor=white" alt="macOS 13 ou version ultérieure"></a>
+  <a href="https://developer.apple.com/documentation/appkit"><img src="https://img.shields.io/badge/Swift-AppKit-F05138?logo=swift&amp;logoColor=white" alt="Swift et AppKit"></a>
+  <a href="https://www.python.org/downloads/macos/"><img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9 ou version ultérieure"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-5874A3" alt="Licence MIT"></a>
 </p>
 

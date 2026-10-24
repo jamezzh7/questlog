@@ -5,9 +5,9 @@
 <p align="center"><strong>A quiet progress companion for your Mac.</strong><br>Turn local Markdown plans into a small, readable view of what's moving.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/macOS-13%2B-333333?logo=apple&amp;logoColor=white" alt="macOS 13 or later">
-  <img src="https://img.shields.io/badge/Swift-AppKit-F05138?logo=swift&amp;logoColor=white" alt="Swift and AppKit">
-  <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9 or later">
+  <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-333333?logo=apple&amp;logoColor=white" alt="macOS 13 or later"></a>
+  <a href="https://developer.apple.com/documentation/appkit"><img src="https://img.shields.io/badge/Swift-AppKit-F05138?logo=swift&amp;logoColor=white" alt="Swift and AppKit"></a>
+  <a href="https://www.python.org/downloads/macos/"><img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9 or later"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-5874A3" alt="MIT license"></a>
 </p>
 

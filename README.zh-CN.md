@@ -5,9 +5,9 @@
 <p align="center"><strong>在 Mac 桌面，安静地看见项目进展。</strong><br>把本地 Markdown 计划，变成随时可看的项目进度。</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/macOS-13%2B-333333?logo=apple&amp;logoColor=white" alt="macOS 13 及以上">
-  <img src="https://img.shields.io/badge/Swift-AppKit-F05138?logo=swift&amp;logoColor=white" alt="Swift 与 AppKit">
-  <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9 及以上">
+  <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-333333?logo=apple&amp;logoColor=white" alt="macOS 13 及以上"></a>
+  <a href="https://developer.apple.com/documentation/appkit"><img src="https://img.shields.io/badge/Swift-AppKit-F05138?logo=swift&amp;logoColor=white" alt="Swift 与 AppKit"></a>
+  <a href="https://www.python.org/downloads/macos/"><img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9 及以上"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-5874A3" alt="MIT 许可"></a>
 </p>
 
