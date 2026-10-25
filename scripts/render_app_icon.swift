@@ -1,6 +1,6 @@
 import AppKit
 
-// The app's existing progress-bar mark, drawn once and exported for macOS.
+// Questlog's mark: a three-quarter progress ring around a check, drawn once and exported for macOS.
 guard CommandLine.arguments.count == 2 else {
     fputs("Usage: swift scripts/render_app_icon.swift <output-directory>\n", stderr)
     exit(1)
@@ -8,9 +8,8 @@ guard CommandLine.arguments.count == 2 else {
 let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 let files = FileManager.default
 try files.createDirectory(at: root, withIntermediateDirectories: true)
-func color(_ hex: Int, _ alpha: CGFloat = 1) -> NSColor {
-    NSColor(calibratedRed: CGFloat((hex >> 16) & 255) / 255,
-            green: CGFloat((hex >> 8) & 255) / 255,
+func color(_ hex: Int, _ alpha: CGFloat = 1) -> CGColor {
+    CGColor(srgbRed: CGFloat((hex >> 16) & 255) / 255, green: CGFloat((hex >> 8) & 255) / 255,
             blue: CGFloat(hex & 255) / 255, alpha: alpha)
 }
 func bitmap(_ size: Int) -> NSBitmapImageRep {
@@ -18,43 +17,52 @@ func bitmap(_ size: Int) -> NSBitmapImageRep {
                      bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
                      isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
 }
+// Apple's continuous-corner tile approximated with a squircle path.
+func squircle(_ rect: CGRect, radius: CGFloat) -> CGPath {
+    let path = CGMutablePath(), r = radius, k: CGFloat = 1.28
+    let (x0, y0, x1, y1) = (rect.minX, rect.minY, rect.maxX, rect.maxY)
+    path.move(to: CGPoint(x: x0 + r * k, y: y1))
+    path.addLine(to: CGPoint(x: x1 - r * k, y: y1))
+    path.addCurve(to: CGPoint(x: x1, y: y1 - r * k), control1: CGPoint(x: x1 - r * 0.36, y: y1), control2: CGPoint(x: x1, y: y1 - r * 0.36))
+    path.addLine(to: CGPoint(x: x1, y: y0 + r * k))
+    path.addCurve(to: CGPoint(x: x1 - r * k, y: y0), control1: CGPoint(x: x1, y: y0 + r * 0.36), control2: CGPoint(x: x1 - r * 0.36, y: y0))
+    path.addLine(to: CGPoint(x: x0 + r * k, y: y0))
+    path.addCurve(to: CGPoint(x: x0, y: y0 + r * k), control1: CGPoint(x: x0 + r * 0.36, y: y0), control2: CGPoint(x: x0, y: y0 + r * 0.36))
+    path.addLine(to: CGPoint(x: x0, y: y1 - r * k))
+    path.addCurve(to: CGPoint(x: x0 + r * k, y: y1), control1: CGPoint(x: x0, y: y1 - r * 0.36), control2: CGPoint(x: x0 + r * 0.36, y: y1))
+    path.closeSubpath()
+    return path
+}
+
 let master = bitmap(1024)
 NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: master)
-NSColor.clear.setFill()
-NSRect(x: 0, y: 0, width: 1024, height: 1024).fill()
-let tile = NSBezierPath(roundedRect: NSRect(x: 96, y: 96, width: 832, height: 832), xRadius: 187, yRadius: 187)
-NSGraphicsContext.saveGraphicsState()
-let shadow = NSShadow()
-shadow.shadowColor = color(0x2F4668, 0.20)
-shadow.shadowOffset = NSSize(width: 0, height: -15)
-shadow.shadowBlurRadius = 25
-shadow.set()
-color(0xF5F8FE).setFill(); tile.fill()
-NSGraphicsContext.restoreGraphicsState()
-NSGradient(starting: color(0xEAF0FA), ending: color(0xFEFEFF))!.draw(in: tile, angle: 90)
-color(0xFFFFFF, 0.95).setStroke(); tile.lineWidth = 3; tile.stroke()
-let inset = NSBezierPath(roundedRect: NSRect(x: 101, y: 101, width: 822, height: 822), xRadius: 182, yRadius: 182)
-color(0xB9C9E1, 0.36).setStroke(); inset.lineWidth = 2; inset.stroke()
+let cg = NSGraphicsContext.current!.cgContext
+cg.clear(CGRect(x: 0, y: 0, width: 1024, height: 1024))
+let tileRect = CGRect(x: 100, y: 100, width: 824, height: 824)
+let tile = squircle(tileRect, radius: 185)
 
-let track = NSBezierPath(roundedRect: NSRect(x: 226, y: 430, width: 572, height: 164), xRadius: 82, yRadius: 82)
-NSGradient(starting: color(0xE0E8F4), ending: color(0xCEDBED))!.draw(in: track, angle: 90)
-color(0xB7C8E1, 0.35).setStroke(); track.lineWidth = 2; track.stroke()
-let fill = NSBezierPath(roundedRect: NSRect(x: 226, y: 430, width: 350, height: 164), xRadius: 82, yRadius: 82)
-NSGraphicsContext.saveGraphicsState()
-let barShadow = NSShadow()
-barShadow.shadowColor = color(0x4C6494, 0.22)
-barShadow.shadowOffset = NSSize(width: 0, height: -5)
-barShadow.shadowBlurRadius = 9
-barShadow.set()
-color(0x728DC0).setFill(); fill.fill()
-NSGraphicsContext.restoreGraphicsState()
-NSGradient(starting: color(0x5C79B0), ending: color(0x91A9D4))!.draw(in: fill, angle: 90)
-NSGraphicsContext.saveGraphicsState()
-fill.addClip()
-let highlight = NSBezierPath(roundedRect: NSRect(x: 237, y: 444, width: 328, height: 138), xRadius: 69, yRadius: 69)
-color(0xFFFFFF, 0.20).setStroke(); highlight.lineWidth = 2; highlight.stroke()
-NSGraphicsContext.restoreGraphicsState()
+// Tile: a quiet off-white surface with the standard soft lift and a hairline edge.
+cg.saveGState()
+cg.setShadow(offset: CGSize(width: 0, height: -12), blur: 24, color: color(0x1C1F2A, 0.18))
+cg.addPath(tile); cg.setFillColor(color(0xFAFAFC)); cg.fillPath()
+cg.restoreGState()
+cg.addPath(tile); cg.setLineWidth(3); cg.setStrokeColor(color(0x1C1F2A, 0.08)); cg.strokePath()
+
+// Ring: a flat track, then one solid arc covering three quarters from twelve o'clock.
+let center = CGPoint(x: 512, y: 512), radius: CGFloat = 236, lineWidth: CGFloat = 52
+cg.addArc(center: center, radius: radius, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+cg.setLineWidth(lineWidth); cg.setStrokeColor(color(0xE6E8EE)); cg.strokePath()
+let start = CGFloat.pi / 2
+cg.addArc(center: center, radius: radius, startAngle: start, endAngle: start - .pi * 1.5, clockwise: true)
+cg.setLineWidth(lineWidth); cg.setLineCap(.round); cg.setStrokeColor(color(0x4A62A8)); cg.strokePath()
+
+// Check: the same stroke weight in ink.
+cg.move(to: CGPoint(x: 422, y: 516))
+cg.addLine(to: CGPoint(x: 490, y: 448))
+cg.addLine(to: CGPoint(x: 612, y: 574))
+cg.setLineWidth(48); cg.setLineCap(.round); cg.setLineJoin(.round)
+cg.setStrokeColor(color(0x23262F)); cg.strokePath()
 NSGraphicsContext.restoreGraphicsState()
 try master.representation(using: .png, properties: [:])!.write(to: root.appendingPathComponent("AppIcon.png"))
 

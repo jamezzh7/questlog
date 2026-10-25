@@ -52,6 +52,7 @@ Replace the sample root with an absolute directory on your Mac. For the included
 {
   "version": 1,
   "language": "auto",
+  "appearance": "auto",
   "projects": [
     {
       "id": "orbit",
@@ -67,5 +68,7 @@ Replace the sample root with an absolute directory on your Mac. For the included
 ```
 
 `language` accepts `auto`, `en`, `zh`, or `fr`. `primaryIds` selects the main denominator. `estimates` maps remaining main task IDs to minimum/maximum hours; the UI provides validation and an editor. `dependencies` can map IDs to human-written dependency notes.
+
+In Settings, **Appearance** offers **Follow system**, **Light**, and **Dark**. The choice applies immediately to the native widget, menu bar overview, and detail window, and is remembered after restarting. The `appearance` preference accepts `auto`, `light`, or `dark`; existing configurations without it follow the system. Following the system does not change the Mac’s appearance setting.
 
 Each selected source retains its own scope, dependencies, and estimates. Prefer the UI source picker when switching between plans. Missing sources produce an error and a recovery action; absent plans display “—” instead of invented progress.

@@ -4,6 +4,7 @@ const nativeAPI = window.webkit?.messageHandlers?.questlogAPI;
 const native = Boolean(window.webkit?.messageHandlers?.questlog);
 const I18N = globalThis.QuestlogI18n;
 let languagePreference = localStorage.getItem("questlog.language") || "auto";
+let appearancePreference = "auto";
 let language = I18N.resolve(languagePreference, navigator.language);
 const t = (key, values) => I18N.translate(key, values, language);
 const displayLocale = () => I18N.locale(language, navigator.language);
@@ -732,6 +733,9 @@ async function start() {
   try {
     const [preferences, projectList] = await Promise.all([api("/api/preferences"), api("/api/projects")]);
     languagePreference = preferences.language;
+    appearancePreference = preferences.appearance || "auto";
+    QuestlogAppearance.apply(appearancePreference);
+    $("#appearance-select").value = appearancePreference;
     applyLanguage();
     projects = projectList.projects;
     await selectProject(projects.some((project) => project.id === projectId) ? projectId : projects[0]?.id);
@@ -769,6 +773,19 @@ $("#language-select").addEventListener("change", async (event) => {
     applyLanguage(); toast(t("languageSaved"));
     nativeAction(`language:${selection}`);
   } catch (failure) { event.target.value = languagePreference; error(failure.message); }
+  finally { event.target.disabled = false; }
+});
+$("#appearance-select").addEventListener("change", async (event) => {
+  const selection = event.target.value;
+  event.target.disabled = true;
+  try {
+    await api("/api/preferences", {appearance: selection});
+    appearancePreference = selection;
+    localStorage.setItem("questlog.appearance", selection);
+    QuestlogAppearance.apply(selection);
+    nativeAction(`appearance:${selection}`);
+    toast(t("appearanceSaved"));
+  } catch (failure) { event.target.value = appearancePreference; error(failure.message); }
   finally { event.target.disabled = false; }
 });
 applyLanguage();

@@ -1,16 +1,20 @@
 import AppKit
 import WebKit
 
-private let paper = NSColor(calibratedRed: 0.975, green: 0.981, blue: 0.991, alpha: 1)
+private func adaptive(_ light: NSColor, _ dark: NSColor) -> NSColor {
+    NSColor(name: nil) { $0.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light }
+}
+private let paper = adaptive(NSColor(calibratedRed: 0.975, green: 0.981, blue: 0.991, alpha: 1), NSColor(calibratedWhite: 0.11, alpha: 1))
 
 private enum WidgetStyle {
     static let size = NSSize(width: 300, height: 120)
-    static let surface = NSColor(calibratedWhite: 0.985, alpha: 1)
-    static let ink = NSColor(calibratedWhite: 0.14, alpha: 1)
-    static let secondary = NSColor(calibratedWhite: 0.40, alpha: 1)
-    static let control = NSColor(calibratedWhite: 0.45, alpha: 1)
-    static let accent = NSColor(calibratedRed: 0.34, green: 0.44, blue: 0.65, alpha: 1)
-    static let track = NSColor(calibratedWhite: 0.90, alpha: 1)
+    static let surface = adaptive(NSColor(calibratedWhite: 0.985, alpha: 1), NSColor(calibratedWhite: 0.14, alpha: 1))
+    static let border = adaptive(NSColor.black.withAlphaComponent(0.12), NSColor.white.withAlphaComponent(0.12))
+    static let ink = adaptive(NSColor(calibratedWhite: 0.14, alpha: 1), NSColor(calibratedWhite: 0.93, alpha: 1))
+    static let secondary = adaptive(NSColor(calibratedWhite: 0.40, alpha: 1), NSColor(calibratedWhite: 0.62, alpha: 1))
+    static let control = adaptive(NSColor(calibratedWhite: 0.45, alpha: 1), NSColor(calibratedWhite: 0.60, alpha: 1))
+    static let accent = adaptive(NSColor(calibratedRed: 0.29, green: 0.38, blue: 0.66, alpha: 1), NSColor(calibratedRed: 0.56, green: 0.64, blue: 0.86, alpha: 1))
+    static let track = adaptive(NSColor(calibratedWhite: 0.90, alpha: 1), NSColor(calibratedWhite: 0.24, alpha: 1))
 }
 
 enum InterfaceLanguage: String {
@@ -36,11 +40,11 @@ struct ProjectSummary: Decodable {
     let current: CurrentStage?; let eta: TimeEstimate
     let work: WorkOverview?; let watchFiles: [String]?; let warning: String?; let warnings: [WorkWarning]?
 }
-struct SummaryResponse: Decodable { let language: String?; let projects: [ProjectChoice]; let project: ProjectSummary? }
+struct SummaryResponse: Decodable { let language: String?; let appearance: String?; let projects: [ProjectChoice]; let project: ProjectSummary? }
 struct MenuProject: Decodable {
     let id: String; let name: String; let overall: ProgressCount?; let state: String
 }
-struct ProjectOverview: Decodable { let language: String?; let projects: [MenuProject] }
+struct ProjectOverview: Decodable { let language: String?; let appearance: String?; let projects: [MenuProject] }
 
 final class CompanionWindow: NSWindow {
     override var canBecomeKey: Bool { true }
@@ -125,9 +129,12 @@ final class WidgetButton: NSButton {
         image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(pointSize: 11, weight: .medium))
     }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); updateAppearance() }
     private func updateAppearance() {
         let alpha: CGFloat = isHighlighted ? 0.10 : hovered ? 0.055 : selected ? 0.055 : 0
-        layer?.backgroundColor = (selected ? WidgetStyle.accent : WidgetStyle.ink).withAlphaComponent(alpha).cgColor
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = (selected ? WidgetStyle.accent : WidgetStyle.ink).withAlphaComponent(alpha).cgColor
+        }
         contentTintColor = selected ? WidgetStyle.accent : hovered || isHighlighted ? WidgetStyle.ink : WidgetStyle.control
     }
 }
@@ -188,13 +195,11 @@ final class WidgetView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        // Keep this instrument legible and opaque regardless of the desktop beneath it.
-        appearance = NSAppearance(named: .aqua)
-        layer?.backgroundColor = WidgetStyle.surface.cgColor
+        // Opaque in both appearances so the instrument stays legible over any desktop.
         layer?.cornerRadius = 12
         layer?.cornerCurve = .continuous
         layer?.borderWidth = 0.5
-        layer?.borderColor = NSColor.black.withAlphaComponent(0.12).cgColor
+        updateSurface()
         title.font = .systemFont(ofSize: 13, weight: .medium)
         title.textColor = WidgetStyle.ink
         title.lineBreakMode = .byTruncatingTail
@@ -227,6 +232,13 @@ final class WidgetView: NSView {
         nextKeyView = pin; pin.nextKeyView = expand; expand.nextKeyView = quit; quit.nextKeyView = pin
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); updateSurface() }
+    private func updateSurface() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = WidgetStyle.surface.cgColor
+            layer?.borderColor = WidgetStyle.border.cgColor
+        }
+    }
     override func layout() {
         super.layout()
         let width = bounds.width
@@ -258,7 +270,10 @@ final class ProgressRing: NSView {
     override func draw(_ dirtyRect: NSRect) {
         let circle = bounds.insetBy(dx: 3, dy: 3)
         let track = NSBezierPath(ovalIn: circle); track.lineWidth = 3
-        NSColor.labelColor.withAlphaComponent(0.10).setStroke(); track.stroke()
+        // A dashed track marks "no checklist yet", distinct from a measured 0%.
+        if percent == nil { track.setLineDash([2.5, 2.5], count: 2, phase: 0); NSColor.labelColor.withAlphaComponent(0.25).setStroke() }
+        else { NSColor.labelColor.withAlphaComponent(0.10).setStroke() }
+        track.stroke()
         guard let percent = percent, percent > 0 else { return }
         WidgetStyle.accent.setStroke()
         if percent >= 100 { track.stroke(); return }
@@ -418,6 +433,16 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     var storeRuntime: StoreRuntime?
     #endif
     var languagePreference = "auto"
+    var appearancePreference = "auto"
+    func applyAppearance(_ preference: String) {
+        let value = ["auto", "light", "dark"].contains(preference) ? preference : "auto"
+        appearancePreference = value
+        let appearance = value == "auto" ? nil : NSAppearance(named: value == "dark" ? .darkAqua : .aqua)
+        NSApp.appearance = appearance
+        window?.appearance = appearance
+        detailsWindow?.appearance = appearance
+        projectPopover.appearance = appearance
+    }
     var language: InterfaceLanguage { InterfaceLanguage.resolve(languagePreference) }
     func localized(_ chinese: String, _ englishText: String, _ french: String) -> String {
         switch language { case .zh: return chinese; case .en: return englishText; case .fr: return french }
@@ -479,6 +504,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
             if let path = settings["config"], let bytes = try? Data(contentsOf: URL(fileURLWithPath: path)),
                let config = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any] {
                 languagePreference = config["language"] as? String ?? "auto"
+                applyAppearance(config["appearance"] as? String ?? "auto")
             }
         } catch { showFailure("\(localized("无法读取本地配置", "Unable to read local configuration", "Impossible de lire les réglages locaux")): \(error.localizedDescription)"); return }
         setupMenu()
@@ -547,10 +573,15 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
-            NSColor.black.setFill()
-            for y: CGFloat in [5, 11] {
-                NSBezierPath(roundedRect: NSRect(x: 2, y: y, width: 14, height: 3), xRadius: 1.5, yRadius: 1.5).fill()
-            }
+            // The app mark in template form: a three-quarter ring around a check.
+            let track = NSBezierPath(ovalIn: NSRect(x: 2.5, y: 2.5, width: 13, height: 13)); track.lineWidth = 1.6
+            NSColor.black.withAlphaComponent(0.3).setStroke(); track.stroke()
+            let arc = NSBezierPath(); arc.lineWidth = 1.6; arc.lineCapStyle = .round
+            arc.appendArc(withCenter: NSPoint(x: 9, y: 9), radius: 6.5, startAngle: 90, endAngle: -180, clockwise: true)
+            NSColor.black.setStroke(); arc.stroke()
+            let check = NSBezierPath(); check.lineWidth = 1.6; check.lineCapStyle = .round; check.lineJoinStyle = .round
+            check.move(to: NSPoint(x: 6.7, y: 9.1)); check.line(to: NSPoint(x: 8.3, y: 7.5)); check.line(to: NSPoint(x: 11.4, y: 10.6))
+            check.stroke()
             return true
         }
         image.isTemplate = true
@@ -616,6 +647,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
             do {
                 let bytes = try result.get()
                 let overview = try JSONDecoder().decode(ProjectOverview.self, from: bytes)
+                self.applyAppearance(overview.appearance ?? "auto")
                 let preference = overview.language ?? "auto"
                 if preference != self.languagePreference { self.languagePreference = preference; self.setupMenu() }
                 self.updateNativeLabels()
@@ -689,6 +721,8 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         if let config = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
            let projects = config["projects"] as? [[String: Any]] {
             let preference = config["language"] as? String ?? "auto"
+            let appearance = config["appearance"] as? String ?? "auto"
+            if appearancePreference != appearance { applyAppearance(appearance) }
             if languagePreference != preference { languagePreference = preference; setupMenu(); updateNativeLabels() }
             for project in projects where selectedID == nil || project["id"] as? String == selectedID {
                 #if APP_STORE
@@ -769,6 +803,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     }
     #endif
     func apply(_ response: SummaryResponse) {
+        applyAppearance(response.appearance ?? "auto")
         let preference = response.language ?? "auto"
         if languagePreference != preference { languagePreference = preference; setupMenu() }
         updateNativeLabels()
@@ -868,6 +903,8 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         if let details = detailsWindow { details.makeKeyAndOrderFront(nil); return }
         detailsReady = false
         let config = WKWebViewConfiguration()
+        let appearance = "window.questlogAppearancePreference = '\(appearancePreference)';"
+        config.userContentController.addUserScript(WKUserScript(source: appearance, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.preferences.tabFocusesLinks = true
         config.userContentController.add(self, name: "questlog")
         #if APP_STORE
@@ -915,7 +952,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
             }
         }
         #else
-        web.loadHTMLString("<html><body style='font:12px -apple-system;background:#f8fafd;color:#7b8798;padding:55px 25px'>\(localized("正在读取项目详情…", "Reading project details…", "Lecture des détails du projet…"))</body></html>", baseURL: nil)
+        web.loadHTMLString("<html style='color-scheme:light dark'><body style='font:12px -apple-system;background:Canvas;color:GrayText;padding:55px 25px'>\(localized("正在读取项目详情…", "Reading project details…", "Lecture des détails du projet…"))</body></html>", baseURL: nil)
         launchService()
         #endif
     }
@@ -985,6 +1022,10 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         else if action == "details-ready" { detailsReady = true; deliverDetailsRoute() }
         else if action == "compact" { showWidget() }
         else if action.hasPrefix("language:") { refreshSummary(force: true) }
+        else if action.hasPrefix("appearance:") {
+            let preference = String(action.dropFirst("appearance:".count))
+            if ["auto", "light", "dark"].contains(preference) { applyAppearance(preference); refreshSummary(force: true) }
+        }
         else if action == "projects-changed" { refreshSummary(force: true) }
         else if action.hasPrefix("project:") {
             if pendingDetailsRoute?.first == "project" { return }

@@ -14,15 +14,15 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.fr.md">Français</a></p>
 <p align="center"><a href="#getting-started">Get started</a> · <a href="#features">Features</a> · <a href="docs/privacy.md">Privacy</a> · <a href="CONTRIBUTING.md">Contribute</a></p>
 
-<p align="center"><img src="docs/images/widget.jpg" width="420" alt="Questlog's native floating widget showing the fictional Orbit project at 60 percent"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/widget-dark.png"><img src="docs/images/widget.png" width="420" alt="Questlog's native floating widget showing the fictional Orbit project at 60 percent"></picture></p>
 
 Questlog reads the task plans you already keep in your project. Glance at the native **300 × 120 pt** widget, open the details when you need context, then get back to building.
 
 No account, API key, model calls, or third-party runtime packages. Your project files stay on your Mac.
 
-<p align="center"><img src="docs/images/details.jpg" width="1000" alt="Questlog's detail window showing modules and task states from the fictional Orbit project"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/details-dark.jpg"><img src="docs/images/details.jpg" width="1000" alt="Questlog's detail window showing modules and task states from the fictional Orbit project"></picture></p>
 
-Screenshots use the fictional [Orbit example](examples/orbit/tasks.md), with no personal project data.
+Screenshots show the current native app with the fictional [Orbit example](examples/orbit/tasks.md). The previews below adapt to light or dark appearance; no personal project data is included.
 
 ## Features
 
@@ -33,8 +33,17 @@ Screenshots use the fictional [Orbit example](examples/orbit/tasks.md), with no 
 - **Progress with a clear meaning.** Main checklist items count once. Module states and milestone subtasks stay separate. Missing plans show “—”.
 - **Details when you need them.** Search, filter, inspect source lines, read project documents, and view recent Git activity.
 - **Estimates you control.** Enter remaining hour ranges and daily availability to see a working-day range.
+- **Your preferred appearance.** Choose Follow system, Light, or Dark in Settings. The widget, menu bar overview, and details update together and remember your choice.
 - **Three interface languages.** English, 简体中文, and Français, with a system-language option. Project content stays as written.
 - **Quiet by default.** The widget checks file metadata; the local detail service starts only when you open details and stops when you collapse them.
+
+<details>
+<summary>Appearance settings and menu bar overview</summary>
+
+<p align="center"><img src="docs/images/appearance.jpg" width="760" alt="Questlog settings with Follow system, Light and Dark appearance choices"></p>
+<p align="center"><img src="docs/images/menu-bar.jpg" width="360" alt="Native menu bar overview showing the Orbit project at 60 percent"></p>
+
+</details>
 
 ## Getting started
 
@@ -95,7 +104,7 @@ Module tasks preserve explicit source states such as in progress, delivered, def
 
 Questlog reads connected Markdown files and, while details are open, a bounded selection of project documents and recent Git metadata. Optional discovery reads local project-directory metadata from Codex or Claude Code. It does not read conversation transcripts or call their models.
 
-The app writes its own connection, language, scope, and estimate settings. It does not edit tracked projects or tool registries. The detail service binds to `127.0.0.1`, and the app includes no analytics or remote backend. [Read the privacy details](docs/privacy.md).
+The app writes its own connection, language, appearance, scope, and estimate settings. It does not edit tracked projects or tool registries. The detail service binds to `127.0.0.1`, and the app includes no analytics or remote backend. [Read the privacy details](docs/privacy.md).
 
 ## Shortcuts
 
@@ -117,7 +126,7 @@ Swift/AppKit provides the native shell, Python's standard library reads local pl
 
 ```sh
 python3 -m unittest discover -s tests -v
-node --test tests/test_i18n.cjs
+node --test tests/*.cjs
 node --check public/app.js
 node --check public/i18n.js
 ```

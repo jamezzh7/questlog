@@ -87,3 +87,36 @@ class NativeAPITests(unittest.TestCase):
         self.assertEqual(self.api.request('POST','/api/preferences',{'language':'zh'})[0],200)
         self.assertEqual(json.loads(self.settings.read_text())['language'],'zh')
         self.assertEqual(self.api.request('GET','/api/projects')[1]['projects'][0]['id'],result['id'])
+
+    def test_appearance_defaults_to_system_for_existing_configs(self):
+        self.assertEqual(self.api.request('GET', '/api/preferences')[1], {'language': 'fr', 'appearance': 'auto'})
+        self.assertEqual(self.api.request('GET', '/api/summary')[1]['appearance'], 'auto')
+
+    def test_appearance_persists_without_changing_language_or_projects(self):
+        original = json.loads(self.settings.read_text())
+        for appearance in ('dark', 'light', 'auto'):
+            code, result = self.api.request('POST', '/api/preferences', {'appearance': appearance})
+            self.assertEqual(code, 200)
+            self.assertEqual(result, {'language': 'fr', 'appearance': appearance})
+            fresh = LocalAPI(self.settings, authorized_roots=[str(self.root)])
+            self.assertEqual(fresh.request('GET', '/api/preferences')[1]['appearance'], appearance)
+            self.assertEqual(fresh.request('GET', '/api/summary')[1]['appearance'], appearance)
+            self.assertEqual(fresh.request('GET', '/api/project-overview')[1]['appearance'], appearance)
+            saved = json.loads(self.settings.read_text())
+            self.assertEqual(saved['projects'], original['projects'])
+            self.assertEqual(saved['language'], original['language'])
+        self.api.request('POST', '/api/preferences', {'language': 'en'})
+        self.assertEqual(json.loads(self.settings.read_text())['appearance'], 'auto')
+
+    def test_invalid_preferences_do_not_partially_save(self):
+        before = self.settings.read_bytes()
+        for payload in ({'appearance': 'sepia'}, {'appearance': None}, {}, {'projects': []},
+                        {'language': 'en', 'appearance': 'invalid'}, {'language': 'invalid', 'appearance': 'dark'}):
+            with self.subTest(payload=payload):
+                self.assertEqual(self.api.request('POST', '/api/preferences', payload)[0], 422)
+                self.assertEqual(self.settings.read_bytes(), before)
+
+    def test_appearance_is_available_without_any_connected_projects(self):
+        self.settings.write_text('{"projects":[],"appearance":"dark"}')
+        self.assertEqual(self.api.request('GET', '/api/summary')[1]['appearance'], 'dark')
+        self.assertEqual(self.api.request('GET', '/api/project-overview')[1]['appearance'], 'dark')

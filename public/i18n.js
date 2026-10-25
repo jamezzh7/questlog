@@ -13,10 +13,14 @@
     privacy: ["隐私政策", "Privacy policy", "Confidentialité"],
     accessRequired: ["需要目录授权", "Folder access required", "Autorisation du dossier requise"],
     privacyRead: ["Questlog 仅在本机读取你授权的项目清单、关联计划、项目说明和 Git 提交元数据。工具索引需另行授权；不读取聊天正文。", "Questlog reads authorized checklists, linked plans, project documents and Git commit metadata on this Mac. Tool indexes require a separate grant. Conversation transcripts are not read.", "Questlog lit sur ce Mac les listes, plans liés, documents et métadonnées Git autorisés. Les index des outils nécessitent une autorisation distincte. Les conversations ne sont pas lues."],
-    privacyStore: ["连接、工时、语言及访问授权保存在应用沙盒内。没有账户、分析、广告、模型调用或向开发者上传的数据。", "Connections, estimates, language and access grants stay in the app sandbox. There are no accounts, analytics, ads, model calls or data uploads to the developer.", "Les connexions, estimations, langue et autorisations restent dans le bac à sable de l’app. Aucun compte, outil d’analyse, publicité, appel de modèle ou envoi de données au développeur."],
+    privacyStore: ["连接、工时、语言、外观及访问授权保存在应用沙盒内。没有账户、分析、广告、模型调用或向开发者上传的数据。", "Connections, estimates, language, appearance and access grants stay in the app sandbox. There are no accounts, analytics, ads, model calls or data uploads to the developer.", "Les connexions, estimations, langue, apparence et autorisations restent dans le bac à sable de l’app. Aucun compte, outil d’analyse, publicité, appel de modèle ou envoi de données au développeur."],
     privacyControl: ["可移除连接以删除其跟踪设置；在设置中重置文件权限可撤回全部目录和索引授权。原项目文件始终保留。完整政策在线提供，反馈请勿附带私人项目内容。", "Remove a connection to delete its tracking settings. Reset file permissions in Settings to revoke all folder and index grants. Project files are kept. A full policy is available online; omit private project content from support reports.", "Retirez une connexion pour supprimer ses réglages de suivi. Réinitialisez les autorisations dans Réglages pour révoquer l’accès aux dossiers et index. Les fichiers du projet sont conservés. La politique complète est en ligne ; excluez tout contenu privé des demandes d’aide."],
     privacyOnline: ["在线完整政策", "Full policy online", "Politique complète en ligne"],
     resetPermissions: ["重置文件访问权限…", "Reset file permissions…", "Réinitialiser les autorisations…"],
+    appearance: ["外观", "Appearance", "Apparence"],
+    systemAppearance: ["跟随系统", "Follow system", "Suivre le système"],
+    lightAppearance: ["浅色", "Light", "Clair"], darkAppearance: ["深色", "Dark", "Sombre"],
+    appearanceSaved: ["已保存外观设置", "Appearance saved", "Apparence enregistrée"],
     settings: ["设置", "Settings", "Réglages"], resources: ["项目资料", "Project info", "Infos du projet"], backTasks: ["返回任务", "Back to tasks", "Retour aux tâches"],
     collapse: ["收起", "Collapse", "Réduire"], readOnly: ["只读", "Read only", "Lecture seule"], viewScope: ["查看范围", "View checklist", "Liste à afficher"],
     currentStage: ["当前", "Current", "En cours"], localHelp: ["仅在本机读取项目文件，不调用模型或上传内容。", "Reads project files on this Mac. No model calls or uploads.", "Lit les fichiers de projet sur ce Mac, sans appel à un modèle ni envoi de données."],
@@ -108,6 +112,7 @@
     noProjects: ["点击“连接新项目”开始跟踪。", "Connect a project to start tracking.", "Connectez un projet pour commencer le suivi."],
   };
   const errors = {
+    "不支持的外观设置": ["Unsupported appearance setting.", "Réglage d’apparence non pris en charge."],
     "请先授权访问该项目目录": ["Authorize access to this project folder first.", "Autorisez d’abord l’accès au dossier de ce projet."],
     "请选择对应的项目目录": ["Choose the matching project folder.", "Choisissez le dossier correspondant à ce projet."],
     "已取消操作": ["Operation cancelled.", "Opération annulée."],

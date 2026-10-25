@@ -14,15 +14,15 @@
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <strong>Français</strong></p>
 <p align="center"><a href="#premiers-pas">Premiers pas</a> · <a href="#fonctionnalités">Fonctionnalités</a> · <a href="docs/privacy.md">Confidentialité</a> · <a href="CONTRIBUTING.md">Contribuer</a></p>
 
-<p align="center"><img src="docs/images/widget.jpg" width="420" alt="Le widget natif de Questlog affiche un avancement de 60 % pour le projet fictif Orbit"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/widget-dark.png"><img src="docs/images/widget.png" width="420" alt="Le widget natif de Questlog affiche un avancement de 60 % pour le projet fictif Orbit"></picture></p>
 
 Questlog lit les plans de tâches que vous conservez déjà dans vos projets. Consultez le widget natif de **300 × 120 points**, ouvrez les détails quand vous avez besoin de contexte, puis reprenez votre travail.
 
 Aucun compte, aucune clé d’API, aucun appel à un modèle d’IA ni paquet tiers à installer pour l’exécution. Les fichiers de vos projets restent sur votre Mac.
 
-<p align="center"><img src="docs/images/details.jpg" width="1000" alt="La fenêtre de détails de Questlog présente les modules et les états des tâches du projet fictif Orbit"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/details-dark.jpg"><img src="docs/images/details.jpg" width="1000" alt="La fenêtre de détails de Questlog présente les modules et les états des tâches du projet fictif Orbit"></picture></p>
 
-Les captures montrent l’interface en anglais et le projet fictif [Orbit](examples/orbit/tasks.md), sans données de projets personnels. L’interface de l’application est également disponible en français.
+Captures de l’application native actuelle avec le projet fictif [Orbit](examples/orbit/tasks.md). Les aperçus suivent l’apparence claire ou sombre et ne contiennent aucune donnée personnelle.
 
 ## Fonctionnalités
 
@@ -33,8 +33,17 @@ Les captures montrent l’interface en anglais et le projet fictif [Orbit](examp
 - **Un avancement clairement défini.** Chaque élément de la liste principale est compté une seule fois. Les états des modules et les sous-tâches des étapes restent séparés. Sans liste de tâches, l’application affiche « — ».
 - **Les détails utiles.** Recherchez et filtrez les tâches, consultez leurs lignes sources, lisez les documents du projet et affichez l’activité Git récente.
 - **Des estimations que vous maîtrisez.** Saisissez une fourchette d’heures restantes et votre disponibilité quotidienne pour obtenir une fourchette de jours ouvrés.
+- **L’apparence de votre choix.** Choisissez Suivre le système, Clair ou Sombre dans Réglages. La mini-fenêtre, la vue de la barre des menus et les détails changent ensemble ; le choix est conservé au redémarrage.
 - **Trois langues d’interface.** English, 简体中文 et Français, avec une option pour suivre la langue du système. Le contenu des projets reste dans sa langue d’origine.
 - **Un fonctionnement discret.** Le widget vérifie les métadonnées des fichiers. Le service local démarre à l’ouverture des détails et s’arrête lorsque vous revenez au widget.
+
+<details>
+<summary>Réglages d’apparence et vue de la barre des menus</summary>
+
+<p align="center"><img src="docs/images/appearance.jpg" width="760" alt="Réglages Questlog avec les apparences système, claire et sombre"></p>
+<p align="center"><img src="docs/images/menu-bar.jpg" width="360" alt="Vue native de la barre des menus avec Orbit à 60 %"></p>
+
+</details>
 
 ## Premiers pas
 
@@ -95,7 +104,7 @@ Les tâches des modules conservent les états explicites du document source : en
 
 Questlog lit les fichiers Markdown connectés et, lorsque les détails sont ouverts, une sélection limitée de documents du projet et de métadonnées Git récentes. La découverte facultative de projets lit les métadonnées des dossiers locaux de Codex ou de Claude Code. Elle ne lit pas les conversations et n’appelle pas leurs modèles.
 
-L’application enregistre ses propres réglages de connexion, de langue, de périmètre et d’estimation. Elle ne modifie ni les projets suivis ni les registres des outils. Le service de détails écoute uniquement sur `127.0.0.1`, sans collecte de statistiques d’utilisation ni serveur distant. Consultez les [informations sur la confidentialité](docs/privacy.md).
+L’application enregistre ses propres réglages de connexion, de langue, d’apparence, de périmètre et d’estimation. Elle ne modifie ni les projets suivis ni les registres des outils. Le service de détails écoute uniquement sur `127.0.0.1`, sans collecte de statistiques d’utilisation ni serveur distant. Consultez les [informations sur la confidentialité](docs/privacy.md).
 
 ## Raccourcis
 
@@ -117,7 +126,7 @@ Swift et AppKit assurent l’interface native, la bibliothèque standard de Pyth
 
 ```sh
 python3 -m unittest discover -s tests -v
-node --test tests/test_i18n.cjs
+node --test tests/*.cjs
 node --check public/app.js
 node --check public/i18n.js
 ```

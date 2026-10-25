@@ -39,7 +39,7 @@ class Handler(BaseHTTPRequestHandler):
         url = urlsplit(self.path)
         if url.path.startswith("/api/"):
             return self.respond(*LocalAPI(self.server.config_path).request("GET", self.path))
-        assets = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/i18n.js": "i18n.js", "/style.css": "style.css", "/icons.png": "icons.png", "/scene.svg": "scene.svg", "/favicon.svg": "favicon.svg"}
+        assets = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/appearance.js": "appearance.js", "/i18n.js": "i18n.js", "/style.css": "style.css", "/icons.png": "icons.png", "/scene.svg": "scene.svg", "/favicon.svg": "favicon.svg"}
         filename = assets.get(url.path)
         if not filename:
             return self.respond(404, {"error": "未找到"})

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a persistent Appearance setting with Follow system, Light and Dark options for the native widget, menu bar overview and details, localized in English, Simplified Chinese and French.
+- Refresh the app icon and README screenshots; keep the compact native layout and add adaptive dark surfaces throughout the app.
 - Fill each sidebar project icon and the selected project’s heading icon clockwise according to its main checklist progress, with sidebar completion counts and percentages in tooltips and accessible labels.
 - Refresh progress for all connected sidebar projects, including inactive ones; show a dashed circle while loading or when a checklist is missing or unavailable.
 

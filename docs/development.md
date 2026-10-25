@@ -46,7 +46,7 @@ Open `http://127.0.0.1:4318/?view=full` and connect a fictional sample project. 
 
 ```sh
 python3 -m unittest discover -s tests -v
-node --test tests/test_i18n.cjs
+node --test tests/*.cjs
 node --check public/app.js
 node --check public/i18n.js
 python3 -m py_compile discovery.py progress.py project_context.py work_structure.py read_summary.py server.py build_app.py install_app.py

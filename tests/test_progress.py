@@ -111,7 +111,7 @@ class ProgressTests(unittest.TestCase):
     def test_empty_native_summary_clears_stale_project(self):
         config_path = self.root / "projects.json"
         config_path.write_text(json.dumps({"language": "zh", "projects": []}))
-        self.assertEqual(load_summary(config_path, "removed-project"), {"language": "zh", "projects": [], "project": None})
+        self.assertEqual(load_summary(config_path, "removed-project"), {"language": "zh", "appearance": "auto", "projects": [], "project": None})
 
 
 class APITests(unittest.TestCase):
@@ -143,6 +143,11 @@ class APITests(unittest.TestCase):
 
     def test_api_returns_file_backed_progress(self):
         self.assertEqual(self.request("/api/progress?project=demo")["overall"]["percent"], 50)
+
+    def test_theme_script_is_served_as_javascript(self):
+        with urlopen(self.url + "/appearance.js", timeout=5) as response:
+            self.assertEqual(response.headers.get_content_type(), "text/javascript")
+            self.assertEqual(response.read(), (Path(__file__).resolve().parents[1] / "public/appearance.js").read_bytes())
 
     def test_source_switch_preserves_settings_per_document_and_source_files(self):
         (self.root / "alternate-plan.md").write_text("## Release\n- [x] C1 Ship\n")
@@ -220,8 +225,8 @@ class APITests(unittest.TestCase):
     def test_language_preference_persists_without_changing_projects(self):
         projects = json.loads(self.config_path.read_text())["projects"]
         for language in ("en", "zh", "fr", "auto"):
-            self.assertEqual(self.request("/api/preferences", {"language": language}), {"language": language})
-            self.assertEqual(self.request("/api/preferences"), {"language": language})
+            self.assertEqual(self.request("/api/preferences", {"language": language}), {"language": language, "appearance": "auto"})
+            self.assertEqual(self.request("/api/preferences"), {"language": language, "appearance": "auto"})
             saved = json.loads(self.config_path.read_text())
             self.assertEqual(saved["language"], language)
             self.assertEqual(saved["projects"], projects)

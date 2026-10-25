@@ -14,15 +14,15 @@
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong> · <a href="README.fr.md">Français</a></p>
 <p align="center"><a href="#开始使用">开始使用</a> · <a href="#功能">功能</a> · <a href="docs/privacy.md">隐私</a> · <a href="CONTRIBUTING.md">参与贡献</a></p>
 
-<p align="center"><img src="docs/images/widget.jpg" width="420" alt="原生小窗显示虚构示例项目 Orbit 的 60% 进度"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/widget-dark.png"><img src="docs/images/widget.png" width="420" alt="原生小窗显示虚构示例项目 Orbit 的 60% 进度"></picture></p>
 
 Questlog 读取项目里已有的任务文档。平时只占一个 **300 × 120 pt** 的原生小窗，需要时展开详情，查看任务和项目资料。
 
 无需账户、API Key、模型调用或第三方运行包。项目内容留在你的 Mac 上。
 
-<p align="center"><img src="docs/images/details.jpg" width="1000" alt="详情窗口按模块展示 Orbit 示例项目的任务及状态"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/details-dark.jpg"><img src="docs/images/details.jpg" width="1000" alt="详情窗口按模块展示 Orbit 示例项目的任务及状态"></picture></p>
 
-截图使用虚构的 [Orbit 示例](examples/orbit/tasks.md)，不包含个人项目资料。
+截图来自当前原生应用，使用虚构的 [Orbit 示例](examples/orbit/tasks.md)。下方预览随浅色或深色外观显示对应截图，不包含个人项目资料。
 
 ## 功能
 
@@ -33,8 +33,17 @@ Questlog 读取项目里已有的任务文档。平时只占一个 **300 × 120 
 - **明确的统计口径**：主清单每项只计一次，模块状态与阶段子项独立展示；没有清单时显示“—”。
 - **可追溯的任务详情**：搜索、筛选、来源行号、项目文档原文和最近 Git 活动。
 - **有依据的工时估算**：填写剩余工时范围及每日投入后，显示工作日区间。
+- **按你的偏好显示**：在设置中选择跟随系统、浅色或深色，小窗、菜单栏总览与详情同步切换，重启后保留选择。
 - **三种界面语言**：English、简体中文、Français，可跟随系统；项目内容保留原文。
 - **按需运行**：小窗轻量检查文件元数据，展开详情才启动本机服务，收起时释放。
+
+<details>
+<summary>外观设置与菜单栏总览</summary>
+
+<p align="center"><img src="docs/images/appearance.jpg" width="760" alt="Questlog 设置提供跟随系统、浅色和深色三档外观"></p>
+<p align="center"><img src="docs/images/menu-bar.jpg" width="360" alt="原生菜单栏总览显示 Orbit 项目 60% 的进度"></p>
+
+</details>
 
 ## 开始使用
 
@@ -95,7 +104,7 @@ open ~/Applications/Questlog.app
 
 Questlog 读取已连接的 Markdown；展开详情时，还会有界读取项目说明及最近 Git 元数据。可选的 Codex / Claude Code 发现功能只读取本机项目目录元数据，不读取聊天正文或调用模型。
 
-应用只写入自己的连接、语言、范围和估算设置，不修改被观察项目或工具注册表。详情服务只绑定 `127.0.0.1`，没有分析上报或远程后端。[隐私说明](docs/privacy.md)介绍具体范围。
+应用只写入自己的连接、语言、外观、范围和估算设置，不修改被观察项目或工具注册表。详情服务只绑定 `127.0.0.1`，没有分析上报或远程后端。[隐私说明](docs/privacy.md)介绍具体范围。
 
 ## 快捷键
 
@@ -117,7 +126,7 @@ Questlog 读取已连接的 Markdown；展开详情时，还会有界读取项�
 
 ```sh
 python3 -m unittest discover -s tests -v
-node --test tests/test_i18n.cjs
+node --test tests/*.cjs
 node --check public/app.js
 node --check public/i18n.js
 ```

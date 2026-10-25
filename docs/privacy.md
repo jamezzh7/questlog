@@ -19,7 +19,7 @@ Questlog does not intentionally read credential stores, `.env` files, applicatio
 
 ## What Questlog writes
 
-Connections, source selections, task scopes, estimates, daily availability, and language preference remain on your Mac. The source-distributed installed app uses `~/Library/Application Support/Questlog/projects.json`; the development launcher uses a source-tree configuration. The Mac App Store build uses its own sandbox container and a `QuestlogStore` Application Support directory, with file-access bookmarks stored separately. The WebKit view may retain local view preferences through web storage.
+Connections, source selections, task scopes, estimates, daily availability, language and appearance preferences remain on your Mac. The source-distributed installed app uses `~/Library/Application Support/Questlog/projects.json`; the development launcher uses a source-tree configuration. The Mac App Store build uses its own sandbox container and a `QuestlogStore` Application Support directory, with file-access bookmarks stored separately. The WebKit view may retain local view preferences through web storage.
 
 Removing a connection removes its Questlog tracking settings, without removing the project directory or changing its source files. Updating the app preserves an existing installed configuration.
 

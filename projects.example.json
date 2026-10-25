@@ -1,4 +1,6 @@
 {
   "version": 1,
+  "language": "auto",
+  "appearance": "auto",
   "projects": []
 }

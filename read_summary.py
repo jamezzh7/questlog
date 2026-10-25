@@ -23,20 +23,20 @@ def load_project_overview(config_path, authorize=None):
         except (OSError, ValueError, KeyError, TypeError):
             pass
         rows.append(row)
-    return {"language": config.get("language", "auto"), "projects": rows}
+    return {"language": config.get("language", "auto"), "appearance": config.get("appearance", "auto"), "projects": rows}
 
 
 def load_summary(config_path, project_id=None, authorize=None):
     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
     projects = config["projects"]
     if not projects:
-        return {"language": config.get("language", "auto"), "projects": [], "project": None}
+        return {"language": config.get("language", "auto"), "appearance": config.get("appearance", "auto"), "projects": [], "project": None}
     project = next((p for p in projects if p["id"] == project_id), projects[0])
     if authorize:
         authorize(project["root"])
     progress = get_progress(project, include_context=False)
     current = progress["current"]
-    return {"language": config.get("language", "auto"), "projects": [{"id": p["id"], "name": p["name"]} for p in projects],
+    return {"language": config.get("language", "auto"), "appearance": config.get("appearance", "auto"), "projects": [{"id": p["id"], "name": p["name"]} for p in projects],
             "project": {"id": progress["id"], "name": progress["name"], "overall": progress["overall"],
                         "current": {k: current.get(k) for k in ("title", "done", "total", "percent", "kind")} if current else None,
                         "work": progress.get("work"), "watchFiles": progress.get("watchFiles", []),

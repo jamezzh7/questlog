@@ -98,7 +98,7 @@ class LocalAPI:
 
     def read(self, config, endpoint, query):
         if endpoint == "/api/preferences":
-            return {"language": config.get("language", "auto")}
+            return {"language": config.get("language", "auto"), "appearance": config.get("appearance", "auto")}
         if endpoint == "/api/projects":
             return {"projects": [{"id": p["id"], "name": p["name"]} for p in config["projects"]]}
         if endpoint == "/api/discovery":
@@ -130,11 +130,14 @@ class LocalAPI:
 
     def mutate(self, config, endpoint, payload):
         if endpoint == "/api/preferences":
-            language = payload.get("language")
-            if language not in ("auto", "en", "zh", "fr"):
+            if not payload or not set(payload) <= {"language", "appearance"}:
+                raise ValueError("请求格式不正确")
+            if "language" in payload and payload["language"] not in ("auto", "en", "zh", "fr"):
                 raise ValueError("不支持的界面语言")
-            config["language"] = language
-            result = {"language": language}
+            if "appearance" in payload and payload["appearance"] not in ("auto", "light", "dark"):
+                raise ValueError("不支持的外观设置")
+            config.update(payload)
+            result = {"language": config.get("language", "auto"), "appearance": config.get("appearance", "auto")}
         elif endpoint == "/api/connections":
             result = connect_discovered(config, payload.get("provider"), payload.get("project"), **self.discovery_options(payload.get("provider")))
         elif endpoint == "/api/projects/remove":
