@@ -69,7 +69,8 @@ def project_documents(config, tasks_file=None):
             if not text:
                 continue
             first = next((line for line in text.splitlines() if line.strip()), "")
-            offset = content.find(first) if first else -1
+            selected_heading = re.search(r"^#{1,6}\s+" + re.escape(title) + r"\s*#*\s*$", content, re.M) if title else None
+            offset = content.find(first, selected_heading.end() if selected_heading else 0) if first else -1
             documents.append({"file": relative, "path": str(path), "modified": path.stat().st_mtime,
                               "line": content[:offset].count("\n") + 1 if offset >= 0 else 1,
                               "evidenceLines": list(enumerate(content.splitlines(), 1)),

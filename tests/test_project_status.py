@@ -137,6 +137,11 @@ class ProjectStatusTests(unittest.TestCase):
         result = self.read(details=True)
         self.assertNotIn("evidenceLines", result["context"][0])
 
+    def test_repeated_status_text_points_to_the_selected_recent_section(self):
+        self.write("STATUS.md", "# Status\n## 2026-10-10\nCurrent: Search\n## 2026-10-25\nCurrent: Search\n")
+        result = self.read()
+        self.assertEqual(result["tracking"]["signals"][0]["line"], 5)
+
     def test_git_activity_cannot_create_a_progress_percentage(self):
         self.write("README.md", "# Product\nJust a project description.\n")
         with patch("progress.git_activity", return_value=[{"commit": "abc", "title": "Ship everything", "date": "2026-10-25"}]):
