@@ -28,6 +28,12 @@ enum InterfaceLanguage: String {
 
 struct ProjectChoice: Decodable { let id: String; let name: String }
 struct ProgressCount: Decodable { let done: Int; let total: Int; let percent: Int }
+struct DetectedCounts: Decodable { let done: Int; let total: Int; let active: Int; let blocked: Int; let pending: Int; let unknown: Int }
+struct StatusEvidence: Decodable { let kind: String; let text: String; let file: String; let line: Int }
+struct StatusConflict: Decodable { let file: String; let text: String }
+struct TrackingState: Decodable {
+    let mode: String; let title: String; let counts: DetectedCounts; let signals: [StatusEvidence]; let conflicts: [StatusConflict]
+}
 struct CurrentStage: Decodable { let title: String; let done: Int?; let total: Int; let kind: String? }
 struct WorkOverview: Decodable { let kind: String; let groupCount: Int; let taskCount: Int; let activeCount: Int }
 struct WorkWarning: Decodable { let file: String; let message: String; let code: String? }
@@ -39,10 +45,12 @@ struct ProjectSummary: Decodable {
     let id: String; let name: String; let overall: ProgressCount
     let current: CurrentStage?; let eta: TimeEstimate
     let work: WorkOverview?; let watchFiles: [String]?; let warning: String?; let warnings: [WorkWarning]?
+    let tracking: TrackingState?
 }
 struct SummaryResponse: Decodable { let language: String?; let appearance: String?; let projects: [ProjectChoice]; let project: ProjectSummary? }
 struct MenuProject: Decodable {
     let id: String; let name: String; let overall: ProgressCount?; let state: String
+    let tracking: TrackingState?
 }
 struct ProjectOverview: Decodable { let language: String?; let appearance: String?; let projects: [MenuProject] }
 
@@ -254,6 +262,7 @@ final class WidgetView: NSView {
         eta.frame = NSRect(x: width - 16 - etaWidth, y: 9, width: etaWidth, height: 17)
     }
     func setProgressValue(_ percent: Int?, french: Bool = false) {
+        track.isHidden = false
         let text = NSMutableAttributedString(string: percent.map(String.init) ?? "—", attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 34, weight: .medium), .foregroundColor: WidgetStyle.ink, .kern: -1
         ])
@@ -305,7 +314,7 @@ final class MenuProjectRow: PopoverButton {
         title = ""; isBordered = false; setButtonType(.momentaryChange)
         wantsLayer = true; layer?.cornerRadius = 7; focusRingType = .exterior
         let ring = ProgressRing(frame: NSRect(x: 12, y: 17, width: 32, height: 32))
-        let percent = project.overall.flatMap { $0.total > 0 ? $0.percent : nil }
+        let percent = project.overall.flatMap { $0.total > 0 && (project.tracking == nil || project.tracking?.mode == "measured") ? $0.percent : nil }
         ring.percent = percent; ring.setAccessibilityElement(false); addSubview(ring)
         let name = PassiveLabel(labelWithString: project.name)
         name.frame = NSRect(x: 56, y: 13, width: width - 140, height: 19)
@@ -657,8 +666,11 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
                     let subtitle: String
                     if project.state == "permission" { subtitle = self.localized("需要重新授权目录", "Folder access required", "Autorisation du dossier requise") }
                     else if project.state == "unavailable" { subtitle = self.localized("暂时无法读取", "Unable to read", "Lecture impossible") }
-                    else if let progress = project.overall, progress.total > 0 {
-                        subtitle = self.localized("主清单 \(progress.done)/\(progress.total)", "Main list \(progress.done)/\(progress.total)", "Liste principale \(progress.done)/\(progress.total)")
+                    else if let tracking = project.tracking, tracking.mode != "measured" {
+                        subtitle = self.trackingSubtitle(tracking)
+                    } else if let progress = project.overall, progress.total > 0 {
+                        let scope = project.tracking?.title.isEmpty == false ? project.tracking!.title : self.localized("主清单", "Main list", "Liste principale")
+                        subtitle = "\(scope) · \(progress.done)/\(progress.total)"
                     } else { subtitle = self.localized("尚无清单", "No checklist", "Aucune liste") }
                     let row = MenuProjectRow(project: project, subtitle: subtitle, french: self.language == .fr,
                                              selected: project.id == self.selectedID, width: overview.projects.count > 6 ? 332 : 348)
@@ -728,7 +740,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
                 #if APP_STORE
                 guard let root = project["root"] as? String, storeRuntime?.access.contains(root) == true else { stamp += "/ungranted"; continue }
                 #endif
-                if project["autoTasks"] as? Bool == true && project["tasksFile"] as? String == nil { autoPlanPolling = true }
+                if project["autoTasks"] as? Bool == true { autoPlanPolling = true }
                 if let root = project["root"] as? String, let relative = project["tasksFile"] as? String {
                     let path = URL(fileURLWithPath: (root as NSString).expandingTildeInPath).appendingPathComponent(relative).path
                     if let attributes = try? FileManager.default.attributesOfItem(atPath: path) {
@@ -829,8 +841,14 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         displayedProjectID = project.id
         watchedSourceFiles = project.watchFiles ?? []
         widget.title.stringValue = project.name; widget.title.toolTip = project.name
+        if let tracking = project.tracking, tracking.mode != "measured" {
+            applyUnmeasured(tracking)
+            rebuildProjectMenu()
+            return
+        }
         widget.setProgressValue(project.overall.total > 0 ? project.overall.percent : nil, french: language == .fr)
-        widget.scope.stringValue = project.overall.total > 0 ? localized("主清单 \(project.overall.done)/\(project.overall.total)", "Main list \(project.overall.done)/\(project.overall.total)", "Liste \(project.overall.done)/\(project.overall.total)") : localized("尚无清单", "No checklist", "Aucune liste")
+        let scopeTitle = project.tracking?.title.isEmpty == false ? project.tracking!.title : localized("主清单", "Main list", "Liste")
+        widget.scope.stringValue = project.overall.total > 0 ? "\(scopeTitle) \(project.overall.done)/\(project.overall.total)" : localized("尚无清单", "No checklist", "Aucune liste")
         widget.track.setProgress(project.overall.percent, animated: sameProject)
         let count = project.overall.total > 0 ? localized("主清单已完成 \(project.overall.done)/\(project.overall.total)；等权任务比例，非工时比例", "\(project.overall.done)/\(project.overall.total) main items complete; not an estimate of work hours", "\(project.overall.done)/\(project.overall.total) éléments principaux terminés ; ce pourcentage ne mesure pas les heures de travail") : localized("已连接项目，等待任务清单；暂不计算完成比例", "Connected; waiting for a checklist. Progress has not been calculated.", "Projet connecté ; en attente d’une liste. L’avancement n’a pas été calculé.")
         widget.value.toolTip = count; widget.scope.toolTip = count; widget.track.toolTip = count
@@ -881,6 +899,28 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         }
         widget.needsLayout = true
         rebuildProjectMenu()
+    }
+    func trackingSubtitle(_ tracking: TrackingState) -> String {
+        if !tracking.conflicts.isEmpty { return localized("来源状态待核对", "Check source states", "Vérifier les états des sources") }
+        if tracking.mode == "tasks" {
+            return localized("识别 \(tracking.counts.total) 项 · 完成 \(tracking.counts.done) · 范围未知", "\(tracking.counts.done)/\(tracking.counts.total) detected · coverage unknown", "\(tracking.counts.done)/\(tracking.counts.total) détectées · périmètre inconnu")
+        }
+        if let signal = tracking.signals.first { return signal.text }
+        return localized("资料不足 · 可定义目标", "More information needed · define goals", "Informations insuffisantes · définir des objectifs")
+    }
+    func applyUnmeasured(_ tracking: TrackingState) {
+        widget.value.font = .systemFont(ofSize: 22, weight: .medium)
+        widget.value.stringValue = tracking.mode == "tasks" ? "\(tracking.counts.done)/\(tracking.counts.total)" : !tracking.conflicts.isEmpty ? localized("待核对", "Check sources", "À vérifier") : tracking.signals.contains(where: { $0.kind == "blocker" }) ? localized("有阻塞", "Blocked", "Bloqué") : tracking.mode == "status" ? localized("项目近况", "Project state", "État du projet") : localized("待补充", "Unknown", "À préciser")
+        widget.scope.stringValue = tracking.mode == "tasks" ? localized("已识别任务", "Detected tasks", "Tâches détectées") : tracking.signals.first?.file ?? ""
+        let evidence = tracking.signals.first(where: { $0.kind == "blocker" }) ?? tracking.signals.first(where: { $0.kind == "current" }) ?? tracking.signals.first
+        widget.stage.stringValue = tracking.mode == "tasks" ? localized("进行中 \(tracking.counts.active) · 阻塞 \(tracking.counts.blocked)", "\(tracking.counts.active) active · \(tracking.counts.blocked) blocked", "\(tracking.counts.active) en cours · \(tracking.counts.blocked) bloquées") : evidence?.text ?? localized("展开查看资料或定义目标", "Open notes or define goals", "Consulter les notes ou définir des objectifs")
+        widget.stage.toolTip = evidence.map { "\($0.text)\n\($0.file):\($0.line)" } ?? trackingSubtitle(tracking)
+        widget.eta.stringValue = tracking.mode == "tasks" ? localized("范围未知", "Scope unknown", "Périmètre inconnu") : ""
+        widget.eta.toolTip = trackingSubtitle(tracking)
+        widget.track.isHidden = true; widget.track.setProgress(0, animated: false)
+        widget.track.setAccessibilityElement(false)
+        widget.value.toolTip = trackingSubtitle(tracking); widget.scope.toolTip = trackingSubtitle(tracking)
+        widget.needsLayout = true
     }
     func rebuildProjectMenu() {
         let menu = NSMenu()

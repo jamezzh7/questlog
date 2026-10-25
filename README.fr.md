@@ -30,7 +30,8 @@ Captures de l’application native actuelle avec le projet fictif [Orbit](exampl
 - **Une petite fenêtre native.** Déplacez-la où vous le souhaitez, épinglez-la sur le bureau actuel si nécessaire et ouvrez les détails à la demande.
 - **Vos propres plans Markdown.** Consultez les listes à cocher, sections, étapes, plans de modules liés, titres de tâches et tableaux Task/Status.
 - **Des projets locaux.** Retrouvez les dossiers de projets à partir des métadonnées de Codex ou de Claude Code, ou connectez un dossier manuellement.
-- **Un avancement clairement défini.** Chaque élément de la liste principale est compté une seule fois. Les états des modules et les sous-tâches des étapes restent séparés. Sans liste de tâches, l’application affiche « — ».
+- **Utile sans plan complet.** Consultez les tâches détectées ou les états sourcés du projet. Confirmez une liste ou définissez des objectifs simples dans Questlog pour suivre un pourcentage sur un périmètre précis. [Modes de suivi](docs/project-status.md).
+- **Un avancement clairement défini.** Chaque élément de la liste principale est compté une seule fois. Les états des modules et les sous-tâches des étapes restent séparés. Sans périmètre confirmé, l’application présente les tâches détectées ou l’état du projet.
 - **Les détails utiles.** Recherchez et filtrez les tâches, consultez leurs lignes sources, lisez les documents du projet et affichez l’activité Git récente.
 - **Des estimations que vous maîtrisez.** Saisissez une fourchette d’heures restantes et votre disponibilité quotidienne pour obtenir une fourchette de jours ouvrés.
 - **L’apparence de votre choix.** Choisissez Suivre le système, Clair ou Sombre dans Réglages. La mini-fenêtre, la vue de la barre des menus et les détails changent ensemble ; le choix est conservé au redémarrage.
@@ -96,7 +97,7 @@ Cette liste affiche **1/3 terminé (33 %)**. Si votre document combine des crit�
 
 ## Calcul de l’avancement
 
-Le pourcentage principal correspond au **nombre d’éléments terminés de la liste principale divisé par le nombre total d’éléments**, chaque élément ayant le même poids. Il ne mesure pas l’effort de développement et ne se déduit pas des modifications du code.
+Avec un périmètre défini, le pourcentage correspond aux **éléments terminés divisés par tous les éléments de ce périmètre**, à poids égal. Un plan incomplet affiche des comptes avec un périmètre inconnu ; sans tâches, l’application affiche un état sourcé ou un manque d’informations. Ce pourcentage ne mesure pas l’effort de développement.
 
 Les tâches des modules conservent les états explicites du document source : en cours, livré, reporté ou en attente de validation, par exemple. Elles ne valident pas automatiquement les éléments de la liste principale. Les commits Git apparaissent dans l’activité sans modifier le pourcentage. Une estimation de durée n’est disponible que lorsque toutes les tâches principales restantes ont une estimation en heures ; elle donne une fourchette de jours ouvrés, sans garantir une date de livraison.
 
@@ -104,7 +105,7 @@ Les tâches des modules conservent les états explicites du document source : en
 
 Questlog lit les fichiers Markdown connectés et, lorsque les détails sont ouverts, une sélection limitée de documents du projet et de métadonnées Git récentes. La découverte facultative de projets lit les métadonnées des dossiers locaux de Codex ou de Claude Code. Elle ne lit pas les conversations et n’appelle pas leurs modèles.
 
-L’application enregistre ses propres réglages de connexion, de langue, d’apparence, de périmètre et d’estimation. Elle ne modifie ni les projets suivis ni les registres des outils. Le service de détails écoute uniquement sur `127.0.0.1`, sans collecte de statistiques d’utilisation ni serveur distant. Consultez les [informations sur la confidentialité](docs/privacy.md).
+L’application enregistre ses propres réglages de connexion, de langue, d’apparence, de périmètre, d’objectifs simples et d’estimation. Elle ne modifie ni les projets suivis ni les registres des outils. Le service de détails écoute uniquement sur `127.0.0.1`, sans collecte de statistiques d’utilisation ni serveur distant. Consultez les [informations sur la confidentialité](docs/privacy.md).
 
 ## Raccourcis
 

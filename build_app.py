@@ -16,7 +16,7 @@ RESOURCES = CONTENTS / "Resources"
 BIN = CONTENTS / "MacOS"
 RESOURCES.mkdir(parents=True, exist_ok=True)
 BIN.mkdir(parents=True, exist_ok=True)
-for name in ("server.py", "progress.py", "read_summary.py", "discovery.py", "project_context.py", "work_structure.py", "api_service.py"):
+for name in ("server.py", "progress.py", "read_summary.py", "discovery.py", "project_context.py", "project_status.py", "work_structure.py", "api_service.py"):
     shutil.copy2(ROOT / name, RESOURCES / name)
 shutil.copytree(ROOT / "public", RESOURCES / "public", dirs_exist_ok=True)
 # Share the web error catalog with the lightweight native widget, without a JS runtime.

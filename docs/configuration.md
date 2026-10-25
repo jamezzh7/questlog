@@ -12,6 +12,8 @@ Connect projects through the detail window. Manual configuration is optional; qu
 
 `projects.example.json` contains an empty project list and no local paths. Settings files contain private project paths and should not be published.
 
+See [project state and tracking scope](project-status.md) for automatic detection, incomplete plans, and app-owned goals.
+
 ## Plain checklists
 
 ```md

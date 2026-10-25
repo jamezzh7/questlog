@@ -14,6 +14,8 @@ HEADING = re.compile(r"^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$")
 WORK_ID = re.compile(r"^([A-Za-z][A-Za-z0-9]*(?:[-_.][A-Za-z0-9]+)*[-_.]\d+)\b[\s:：、-]*(.*)$")
 FIELD = re.compile(r"^\s*(?:[-*+]\s+)?(?:\*\*)?([^:：\n]{1,30}?)(?:\*\*)?\s*[:：]\s*(.*)$")
 HISTORY = re.compile(r"(?:^|[/\s_-])(?:archive[d]?|history|historical|legacy)(?:$|[/\s_-])|历史|归档|存档", re.I)
+EXAMPLE = re.compile(r"^(?:(?:examples?|samples?)\b|示例|例子)", re.I)
+INSTRUCTION = re.compile(r"^(?:(?:installation|setup|getting started|quick ?start|usage|prerequisites)\b|安装|快速开始|使用方法|环境准备)", re.I)
 WORK_LINK = re.compile(r"module|模块|task|任务|work[-_ ]?plan|工作计划|工作分解", re.I)
 
 
@@ -100,7 +102,7 @@ def parse_work_plan(text, file, linked=False):
 
     def add(record, task, parent=False):
         ancestors = record["parents"] + ([] if parent else [record])
-        if any(HISTORY.search(item["title"]) for item in ancestors):
+        if any(HISTORY.search(item["title"]) or EXAMPLE.search(item["title"]) or (Path(file).name.lower().startswith("readme") and INSTRUCTION.search(item["title"])) for item in ancestors):
             return
         group = record["parents"][-1] if parent and record["parents"] else record
         keys = [item["key"] for item in group["parents"]] + [group["key"]]
@@ -165,7 +167,16 @@ def parse_work_plan(text, file, linked=False):
 
 
 def local_work_links(text, file):
+    ancestors = []
     for _number, line in visible_lines(text):
+        heading = HEADING.match(line)
+        if heading:
+            level = len(heading[1])
+            while ancestors and ancestors[-1][0] >= level:
+                ancestors.pop()
+            ancestors.append((level, heading[2]))
+        if any(HISTORY.search(title) or EXAMPLE.search(title) for _, title in ancestors):
+            continue
         for label, destination in re.findall(r"\[([^\]\n]+)\]\(<?([^\s)>]+)>?(?:\s+[\"'][^\n]*?[\"'])?\)", line):
             parsed = urlsplit(destination)
             if parsed.scheme or parsed.netloc or not parsed.path or parsed.path.startswith(("/", "~")):

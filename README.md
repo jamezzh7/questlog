@@ -30,7 +30,8 @@ Screenshots show the current native app with the fictional [Orbit example](examp
 - **A small native window.** Drag it where you like, optionally pin it on the current desktop, and expand it for details.
 - **Bring your own Markdown.** Read checklists, document sections, milestones, linked module plans, task headings, and Task/Status tables.
 - **Connect local projects.** Discover project directories from Codex or Claude Code metadata, or select a directory manually.
-- **Progress with a clear meaning.** Main checklist items count once. Module states and milestone subtasks stay separate. Missing plans show “—”.
+- **Useful without a complete plan.** Show detected task states or sourced project updates. Confirm a checklist scope or define lightweight goals in Questlog to track a meaningful percentage. [How tracking works](docs/project-status.md).
+- **Progress with a clear meaning.** Main checklist items count once. Module states and milestone subtasks stay separate. Unconfirmed plans show task states or project updates.
 - **Details when you need them.** Search, filter, inspect source lines, read project documents, and view recent Git activity.
 - **Estimates you control.** Enter remaining hour ranges and daily availability to see a working-day range.
 - **Your preferred appearance.** Choose Follow system, Light, or Dark in Settings. The widget, menu bar overview, and details update together and remember your choice.
@@ -96,7 +97,7 @@ This checklist shows **1/3 complete (33%)**. For mixed acceptance lists and subt
 
 ## How progress works
 
-The headline percentage is **completed main checklist items ÷ all main checklist items**, with equal weight per item. It is not a measure of engineering effort or a prediction based on code changes.
+With a defined scope, the percentage is **completed items ÷ all items in that scope**, with equal weight per item. Automatically detected partial plans show counts and unknown coverage; projects without tasks show sourced state or an unknown state. It is not a measure of engineering effort or a prediction based on code changes.
 
 Module tasks preserve explicit source states such as in progress, delivered, deferred, or awaiting acceptance. They do not silently check off parent acceptance items. Git commits appear as activity, without changing the percentage. Completion dates appear only when all remaining main items have hour estimates; the result is a working-day range, not a delivery guarantee.
 
@@ -104,7 +105,7 @@ Module tasks preserve explicit source states such as in progress, delivered, def
 
 Questlog reads connected Markdown files and, while details are open, a bounded selection of project documents and recent Git metadata. Optional discovery reads local project-directory metadata from Codex or Claude Code. It does not read conversation transcripts or call their models.
 
-The app writes its own connection, language, appearance, scope, and estimate settings. It does not edit tracked projects or tool registries. The detail service binds to `127.0.0.1`, and the app includes no analytics or remote backend. [Read the privacy details](docs/privacy.md).
+The app writes its own connection, language, appearance, scope, lightweight goal and estimate settings. It does not edit tracked projects or tool registries. The detail service binds to `127.0.0.1`, and the app includes no analytics or remote backend. [Read the privacy details](docs/privacy.md).
 
 ## Shortcuts
 

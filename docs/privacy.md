@@ -1,6 +1,6 @@
 # Privacy and local data
 
-Last updated: October 22, 2026. [简体中文](privacy.zh-CN.md) · [Français](privacy.fr.md)
+Last updated: October 25, 2026. [简体中文](privacy.zh-CN.md) · [Français](privacy.fr.md)
 
 Questlog has no account system, analytics, model integration, or remote backend. This describes the app; README badge images are separately requested by your browser when viewing the repository.
 
@@ -8,6 +8,7 @@ Questlog has no account system, analytics, model integration, or remote backend.
 
 - Connected Markdown checklists and explicitly linked local task plans, confined to the project root.
 - File metadata needed to detect changes.
+- Without a task structure, up to four known project documents provide explicit status fields for the widget and menu bar.
 - In the detail view, a bounded selection of README, handoff, status, requirements, and delivery documents, with source attribution, plus recent Git activity.
 - When you choose Codex or Claude Code discovery, project-directory metadata from their local registries or dedicated indexes.
 
@@ -19,7 +20,7 @@ Questlog does not intentionally read credential stores, `.env` files, applicatio
 
 ## What Questlog writes
 
-Connections, source selections, task scopes, estimates, daily availability, language and appearance preferences remain on your Mac. The source-distributed installed app uses `~/Library/Application Support/Questlog/projects.json`; the development launcher uses a source-tree configuration. The Mac App Store build uses its own sandbox container and a `QuestlogStore` Application Support directory, with file-access bookmarks stored separately. The WebKit view may retain local view preferences through web storage.
+Connections, source selections, task scopes, estimates, daily availability, language and appearance preferences, tracking scopes and lightweight goals remain on your Mac. The source-distributed installed app uses `~/Library/Application Support/Questlog/projects.json`; the development launcher uses a source-tree configuration. The Mac App Store build uses its own sandbox container and a `QuestlogStore` Application Support directory, with file-access bookmarks stored separately. The WebKit view may retain local view preferences through web storage.
 
 Removing a connection removes its Questlog tracking settings, without removing the project directory or changing its source files. Updating the app preserves an existing installed configuration.
 

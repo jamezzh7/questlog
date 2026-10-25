@@ -331,3 +331,23 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .compact .compact-footer { align-items: baseline; gap: 8px; margin-top: 4px; font-size: 11px; }
 .compact #mini-current { flex: 1; }
 .compact #toast { left: 50%; }
+
+/* Evidence and scope follow the reader's existing flat hierarchy. */
+.tracking-overview { margin: 22px 0 26px 30px; padding-top: 16px; border-top: 1px solid var(--line); }
+.tracking-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.tracking-heading h2 { font-size: 14px; }
+.tracking-overview p { margin: 7px 0; color: var(--secondary); font-size: 12px; }
+#tracking-conflicts { color: var(--warn); }
+.tracking-signal { margin: 12px 0; font-size: 13px; }
+.tracking-signal strong { display: inline-block; min-width: 90px; color: var(--secondary); font-weight: 500; }
+.tracking-signal .text-button { display: block; margin-top: 3px; font-size: 11px; }
+#tracking-dialog { width: min(520px, calc(100vw - 40px)); }
+#tracking-dialog label { display: grid; gap: 6px; margin: 16px 0; }
+#tracking-goals { width: 100%; resize: vertical; padding: 9px; color: var(--ink); background: var(--paper); border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+#content.unmeasured #overall-bar, #content.unmeasured .estimate-summary { display: none; }
+#content.unmeasured #percent { font-size: 13px; color: var(--secondary); }
+
+#content.no-plan #tasks-view { display: none; }
+
+.tracking-signal strong { margin-right: 12px; }
+#content.no-plan .overall-summary { display: none; }

@@ -29,9 +29,13 @@ class DetailTests(unittest.TestCase):
         self.assertEqual(result["sources"][0]["path"], str(self.root / "README.md"))
         self.assertEqual(result["activity"][0]["commit"], "abc")
 
-    def test_widget_does_not_read_context_even_without_plan(self):
-        with patch("project_context.project_documents", side_effect=AssertionError("No context scans")), patch("progress.git_activity", side_effect=AssertionError("No Git")):
-            self.assertEqual(get_progress(self.config, include_context=False)["context"], [])
+    def test_widget_reads_bounded_status_evidence_without_git_or_full_context(self):
+        (self.root / "STATUS.md").write_text("# Status\nCurrent: Search\nBlocker: Awaiting review\n")
+        with patch("progress.git_activity", side_effect=AssertionError("No Git")):
+            result = get_progress(self.config, include_context=False)
+        self.assertEqual(result["context"], [])
+        self.assertEqual(result["tracking"]["mode"], "status")
+        self.assertEqual(result["tracking"]["signals"][0]["file"], "STATUS.md")
 
     def test_generic_sections_are_inspectable_without_double_counting(self):
         (self.root / "tasks.md").write_text("# Build\n## Design\n- [x] Sketch\n## Ship\n- [ ] Install\n")

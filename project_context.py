@@ -68,7 +68,11 @@ def project_documents(config, tasks_file=None):
             title, text, truncated = excerpt(content, recent=any(token in relative.lower() for token in ("handoff", "交接", "进度", "进展", "status", "交付说明")))
             if not text:
                 continue
+            first = next((line for line in text.splitlines() if line.strip()), "")
+            offset = content.find(first) if first else -1
             documents.append({"file": relative, "path": str(path), "modified": path.stat().st_mtime,
+                              "line": content[:offset].count("\n") + 1 if offset >= 0 else 1,
+                              "evidenceLines": list(enumerate(content.splitlines(), 1)),
                               "title": title or path.stem, "text": text, "truncated": truncated})
         except (OSError, ValueError, UnicodeError):
             # Optional docs must not prevent the actual checklist from loading.

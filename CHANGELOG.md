@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Show scoped completion, detected task counts, explicit project state or an unknown state according to the available evidence; keep percentages out of incomplete plans across native and web views.
+- Prefer current and explicitly linked task plans, exclude README setup checks and historical examples, and combine bounded sources without double-counting matching tasks.
+- Add Tracking scope with a named checklist or app-owned lightweight goals, persistent completion marks, preserved drafts and separate work estimates.
+
 - Add a persistent Appearance setting with Follow system, Light and Dark options for the native widget, menu bar overview and details, localized in English, Simplified Chinese and French.
 - Refresh the app icon and README screenshots; keep the compact native layout and add adaptive dark surfaces throughout the app.
 - Fill each sidebar project icon and the selected project’s heading icon clockwise according to its main checklist progress, with sidebar completion counts and percentages in tooltips and accessible labels.

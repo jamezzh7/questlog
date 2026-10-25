@@ -10,18 +10,19 @@ TASK = re.compile(r"^\s*[-*+]\s+\[([ xX!~\-])\]\s+(.+)$")
 IDENTIFIER = re.compile(r"^([A-Z]+\d*(?:[._-][A-Z0-9]+)*)\b[\s:：.、-]*(.*)$")
 
 
-def parse_tasks(text):
-    tasks, heading, fence, section = [], "任务清单", False, 0
-    for number, line in enumerate(text.splitlines(), 1):
-        if re.match(r"^\s*(```|~~~)", line):
-            fence = not fence
-            continue
-        if fence:
-            continue
-        title = re.match(r"^#{1,6}\s+(.+?)\s*#*$", line)
+def parse_tasks(text, exclude_instructions=False):
+    from work_structure import visible_lines, HISTORY, INSTRUCTION, EXAMPLE
+    tasks, heading, section, ancestors = [], "任务清单", 0, []
+    for number, line in visible_lines(text):
+        title = re.match(r"^(#{1,6})\s+(.+?)\s*#*$", line)
         if title:
-            heading = title.group(1)
+            level, heading = len(title[1]), title[2]
             section = number
+            while ancestors and ancestors[-1][0] >= level:
+                ancestors.pop()
+            ancestors.append((level, heading))
+        if any(HISTORY.search(name) or EXAMPLE.search(name) or (exclude_instructions and INSTRUCTION.search(name)) for _, name in ancestors):
+            continue
         match = TASK.match(line)
         if not match:
             continue
@@ -32,7 +33,7 @@ def parse_tasks(text):
         # Requirements references are evidence, not part of the task name.
         name = re.sub(r"[（(]R\d+[^）)]*[）)]\s*", "", name).rstrip("。；;")
         tasks.append({"id": task_id, "title": name, "done": mark.lower() == "x",
-                      "status": "done" if mark.lower() == "x" else "blocked" if mark == "!" else "pending",
+                      "status": "done" if mark.lower() == "x" else "blocked" if mark == "!" else "in_progress" if mark == "~" else "pending",
                       "heading": heading, "section": section, "line": number})
     return tasks
 
@@ -114,13 +115,17 @@ def add_context(result, config, include_context, activity_reader=None):
     return result
 
 
-def get_progress(config, include_context=True, activity_reader=None):
+def _get_progress(config, include_context=True, activity_reader=None):
     root = Path(config["root"]).expanduser().resolve()
-    if config.get("autoTasks") and not config.get("tasksFile"):
+    if config.get("autoTasks"):
         from discovery import find_task_files
         choices = find_task_files(root)
+        choices = [choice for choice in choices if not choice.get("obsolete")]
         if choices:
-            config = {**config, "tasksFile": choices[0]["file"], "primaryIds": choices[0]["primaryIds"]}
+            if config.get("tasksFile") != choices[0]["file"]:
+                saved = config.get("planSettings", {}).get(choices[0]["file"], {})
+                config = {**config, "tasksFile": choices[0]["file"], "primaryIds": saved.get("primaryIds", choices[0]["primaryIds"]),
+                          "estimates": saved.get("estimates", {}), "dependencies": saved.get("dependencies", {})}
         else:
             if not root.is_dir():
                 raise ValueError("项目目录不存在")
@@ -135,7 +140,7 @@ def get_progress(config, include_context=True, activity_reader=None):
     content = read_document(path)
     from work_structure import collect_work_structure
     work = collect_work_structure(root, path, content)
-    tasks = parse_tasks(content)
+    tasks = parse_tasks(content, exclude_instructions=bool(config.get("autoTasks")) and path.name.lower().startswith("readme"))
     ids = config.get("primaryIds", [])
     primary = [dict(task) for task in tasks if task["id"] in ids] if ids else [dict(task) for task in tasks]
     if not ids and work["groups"]:
@@ -188,3 +193,16 @@ def get_progress(config, include_context=True, activity_reader=None):
             "checkedAt": datetime.now(timezone.utc).isoformat(),
             "method": "主清单独立计数；模块按任务原文状态展示，不推算模块百分比。" if work["groups"] else "主清单等权计数；阶段子任务单独统计。百分比不代表工时完成度。" if supplemental else
                       "任务按文档章节分组；每项仅计数一次。百分比不代表工时完成度。"}, config, include_context, activity_reader)
+
+
+def get_progress(config, include_context=True, activity_reader=None):
+    from project_status import enrich
+    if config.get("trackingScope", {}).get("kind") == "goals":
+        # App-owned goals can be followed even when no task document exists.
+        result = add_context({"id": config["id"], "name": config["name"], "root": str(Path(config["root"]).expanduser().resolve()), "tasksFile": None,
+                              "primary": [], "overall": summary([]), "milestones": [], "current": None, "next": None, "dependencies": 0,
+                              "milestonesSeparate": False, "eta": {}, "estimates": {}, "hoursPerDay": config.get("hoursPerDay", 4), "sources": [],
+                              "revision": "goals", "checkedAt": datetime.now(timezone.utc).isoformat()}, config, include_context, activity_reader)
+    else:
+        result = _get_progress(config, include_context, activity_reader)
+    return enrich(result, config, include_context)

@@ -4,9 +4,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 
-SKIP = {".git", ".codex", ".claude", ".agents", ".venv", "venv", "node_modules", "vendor", "dist", "build", "Library", "__pycache__"}
+SKIP = {".git", ".codex", ".claude", ".agents", ".venv", "venv", "node_modules", "vendor", "dist", "build", "Library", "__pycache__", "examples", "samples", "fixtures"}
 
 
 def primary_ids(tasks):
@@ -71,11 +72,11 @@ def claude_roots(home, registry_file=None):
 
 def find_task_files(root):
     from progress import parse_tasks, read_document, source_path
-    from work_structure import HISTORY, parse_work_plan
+    from work_structure import HISTORY, parse_work_plan, local_work_links, visible_lines
     root = Path(root).expanduser().resolve()
     if not root.is_dir():
         return []
-    candidates = []
+    candidates, linked = [], set()
     visited = 0
     for directory, folders, files in os.walk(root, followlinks=False):
         depth = len(Path(directory).relative_to(root).parts)
@@ -98,21 +99,39 @@ def find_task_files(root):
             try:
                 path = source_path(root, relative)
                 content = read_document(path)
-                tasks = parse_tasks(content)
+                tasks = parse_tasks(content, exclude_instructions=lower.startswith("readme"))
                 groups = parse_work_plan(content, relative)
             except (OSError, ValueError, UnicodeError):
                 continue
+            # Explicit documentation links outrank a conventional filename.
+            if any(token in lower for token in ("readme", "handoff", "status", "交接", "进度")):
+                for target in local_work_links(content, relative):
+                    try:
+                        linked.add(str(source_path(root, target).relative_to(root)))
+                    except ValueError:
+                        continue
             if not tasks and not groups:
                 continue
             score = 100 if lower == "tasks.md" else 90 if "task" in lower else 85 if "module" in lower or "模块" in lower else 80 if "todo" in lower else 70 if "plan" in lower else 50
+            headings = [line.lstrip("# ").strip() for _, line in visible_lines(content) if re.match(r"^#{1,2}\s", line)]
+            current = any(re.search(r"^(?:current\b|active\b|当前|本轮|本次|正在)", title, re.I) for title in headings)
+            obsolete = any(re.search(r"obsolete|superseded|deprecated|旧版本|已替代", title, re.I) for title in headings)
+            obsolete = obsolete or bool(tasks and all(t["done"] for t in tasks) and any(re.search(r"(?:release|版本).*?(?:completed|shipped|已完成|已发布)|(?:completed|已完成).*?(?:release|版本)", title, re.I) for title in headings) and not current)
+            score += 45 if current else 0
+            score -= 150 if obsolete else 0
             work_lines = {task["line"] for group in groups for task in group["tasks"]}
             main_tasks = [task for task in tasks if task["section"] not in work_lines] if groups else tasks
-            candidates.append({"file": relative, "total": len(tasks), "done": sum(task["done"] for task in tasks), "score": score - depth,
+            candidates.append({"file": relative, "total": len(tasks), "done": sum(task["done"] for task in tasks), "score": score - depth, "obsolete": obsolete,
+                               "reason": "obsolete" if obsolete else "current" if current else "conventional", "title": headings[0][:100] if headings else path.stem,
                                "primaryIds": primary_ids(main_tasks), "workTasks": sum(group["total"] for group in groups)})
             if len(candidates) >= 40:
                 break
         if len(candidates) >= 40:
             break
+    for candidate in candidates:
+        if candidate["file"] in linked and not candidate["obsolete"]:
+            candidate["score"] += 65
+            candidate["reason"] = "linked"
     return sorted(candidates, key=lambda item: (-item["score"], item["file"]))
 
 
@@ -134,7 +153,7 @@ def discover_projects(provider, config, home=None, registry_file=None, authorize
         seen.add(str(root))
         needs_grant = authorized_roots is not None and not any(root.is_relative_to(Path(grant).resolve()) for grant in authorized_roots)
         available = needs_grant or root.is_dir()
-        choices = find_task_files(root) if available and not needs_grant and str(root) not in connected else []
+        choices = [item for item in find_task_files(root) if not item.get("obsolete")] if available and not needs_grant and str(root) not in connected else []
         projects.append({"id": hashlib.sha256(f"{provider}:{root}".encode()).hexdigest()[:20],
                          "name": label if isinstance(label, str) and label else root.name,
                          "root": str(root), "available": available, "requiresAuthorization": needs_grant,

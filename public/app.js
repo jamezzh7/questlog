@@ -27,6 +27,8 @@ let percentFrame = 0;
 let displayedPercent = 0;
 let percentProject = "";
 let removalTarget = null;
+let trackingProject = null;
+let trackingItems = [];
 let stageId = null;
 let scopeChosen = false;
 let suspendedScope = null;
@@ -294,8 +296,9 @@ function updateProjectProgress() {
   for (const entry of document.querySelectorAll(".project-entry")) {
     const reading = projectProgress.get(entry.dataset.project);
     const overall = reading?.overall;
-    const known = setProjectProgress(entry.querySelector(".project-progress"), reading?.state === "ready" ? overall : null);
-    const description = known ? t("progressValue", overall) : t(!reading ? "reading" : reading.state === "permission" ? "accessRequired" : reading.state === "no-plan" ? "noProgress" : "progressUnavailable");
+    const measured = !reading?.tracking || reading.tracking.mode === "measured";
+    const known = setProjectProgress(entry.querySelector(".project-progress"), reading?.state === "ready" && measured ? overall : null);
+    const description = known ? `${reading?.tracking?.title || t("mainChecklist")} · ${t("progressValue", overall)}` : reading?.tracking?.mode === "tasks" ? `${t("trackingCounts", reading.tracking.counts)} · ${t("coverageUnknown")}` : reading?.tracking?.mode === "status" ? t("trackingStatus") : t(!reading ? "reading" : reading.state === "permission" ? "accessRequired" : reading.state === "no-plan" ? "noProgress" : "progressUnavailable");
     const name = entry.querySelector(".project-name").textContent;
     const button = entry.querySelector(".project-button");
     button.title = `${name}\n${description}`;
@@ -346,27 +349,32 @@ function renderTasks() {
   const scope = allWork ? groups.flatMap((item) => item.tasks) : stage ? stage.tasks : data.primary;
   const query = $("#task-search").value.trim().toLocaleLowerCase();
   const items = scope.filter((task) => (filter === "all" || (filter === "done" ? task.done === true : task.done !== true)) && `${task.id} ${task.title} ${task.groupTitle || ""} ${task.statusText || ""} ${task.dependency || ""}`.toLocaleLowerCase().includes(query));
-  text("#task-heading", stage ? shortTitle(stage.title) : allWork ? t("moduleTasks") : t("mainChecklist"));
+  text("#task-heading", stage ? shortTitle(stage.title) : data.tracking?.mode === "tasks" ? t("trackingTasks") : allWork ? t("moduleTasks") : data.tracking?.basis === "goals" ? t("trackingGoals") : t("mainChecklist"));
   text("#task-total", workScope ? workTaskCount(scope.length) : scope.length ? `${scope.filter((task) => task.done).length}/${scope.length}` : "");
-  text("#task-scope", t(data.state === "no-plan" ? "noPlanScope" : workScope ? "moduleScope" : stage ? data.milestonesSeparate ? "separateScope" : "includedScope" : "mainScope"));
+  text("#task-scope", t(data.tracking?.basis === "goals" ? "trackingLocalHelp" : data.state === "no-plan" ? "noPlanScope" : workScope ? "moduleScope" : stage ? data.milestonesSeparate ? "separateScope" : "includedScope" : "mainScope"));
+  $("#task-scope").hidden = data.tracking?.mode === "tasks";
   $("#task-search").disabled = !scope.length;
   let lastGroup = null;
   const rows = [];
   for (const task of items) {
     if (allWork && task.groupId !== lastGroup) {
       const heading = node("div", "work-group-heading", task.groupTitle);
+      if (data.work?.kind === "observed") {
+        const source = node("button", "text-button", t("readDocument")); source.type = "button";
+        source.addEventListener("click", () => readDocument(task.file, source)); heading.append(source);
+      }
       heading.setAttribute("role", "heading"); heading.setAttribute("aria-level", "3"); rows.push(heading);
       lastGroup = task.groupId;
     }
     const row = node("div", `task-row ${task.status}${workScope ? " work-task" : ""}`);
-    row.title = t("sourceLine", {file: task.file || data.tasksFile, line: task.line});
+    row.title = data.tracking?.basis === "goals" ? t("trackingLocalHelp") : t("sourceLine", {file: task.file || data.tasksFile, line: task.line});
     row.setAttribute("role", "listitem");
-    const status = workScope ? task.status === "pending" && task.statusText ? task.statusText : t(`workStatus_${task.status}`) : t(task.done ? "done" : task.dependency ? "dependency" : task.status === "blocked" ? "blocked" : "todo");
+    const status = data.tracking?.mode === "tasks" && task.done === true ? t("done") : data.tracking?.mode === "tasks" && task.done === false && task.status === "pending" ? t("todo") : workScope ? task.status === "pending" && task.statusText ? task.statusText : t(`workStatus_${task.status}`) : t(task.done ? "done" : task.dependency ? "dependency" : task.status === "blocked" ? "blocked" : "todo");
     const state = node("span", "task-state");
     const blocked = workScope ? ["blocked", "deferred"].includes(task.status) : task.dependency || task.status === "blocked";
     const icon = node("span", `symbol icon-${task.done ? "done" : blocked ? "blocked" : "pending"}`);
     icon.setAttribute("aria-hidden", "true"); state.append(icon, node("span", "sr-only", status));
-    row.append(state, node("span", "task-id", /^(line-|heading-)/.test(task.id) ? "" : task.id));
+    row.append(state, node("span", "task-id", /^(line-|heading-|goal-)/.test(task.id) ? "" : task.id));
     const content = node("div"); content.append(node("div", "task-title", task.title));
     if (workScope) {
       const stateText = task.statusText || status;
@@ -450,32 +458,98 @@ function renderContext() {
   }));
   if (!data.context.length) $("#project-notes").append(node("p", "context-empty", t("noContext")));
 }
+function renderTracking() {
+  const tracking = data.tracking;
+  if (!tracking) return;
+  const key = {measured: "trackingMeasured", tasks: "trackingTasks", status: "trackingStatus", unknown: "trackingUnknown"}[tracking.mode];
+  text("#tracking-title", t(tracking.mode === "tasks" || tracking.mode === "measured" ? "trackingBasis" : key));
+  text("#tracking-description", t({measured: "trackingDefinedHelp", tasks: "trackingPartialHelp", status: "trackingStatusHelp", unknown: "trackingUnknownHelp"}[tracking.mode]));
+  text("#tracking-counts", tracking.mode === "tasks" ? t("trackingCounts", tracking.counts) : "");
+  $("#tracking-conflicts").hidden = !tracking.conflicts.length;
+  $("#tracking-signals").replaceChildren(...tracking.signals.map((signal) => {
+    const row = node("div", "tracking-signal");
+    row.append(node("strong", "", t(`signal_${signal.kind}`)), document.createTextNode(signal.text));
+    const source = node("button", "text-button", `${t("sourceLine", signal)} · ${new Date(signal.modified * 1000).toLocaleDateString(displayLocale())}`); source.type = "button";
+    source.title = new Date(signal.modified * 1000).toLocaleString(displayLocale());
+    source.addEventListener("click", () => readDocument(signal.file, source)); row.append(source); return row;
+  }));
+}
+function updateTrackingFields() {
+  const kind = $("#tracking-kind").value;
+  $("#tracking-goals-field").hidden = kind !== "goals";
+  $("#tracking-name-field").hidden = kind === "auto";
+  text("#tracking-source-note", kind === "checklist" ? trackingProject?.source || t("scopeNeedsSource") : "");
+}
+$("#tracking-kind").addEventListener("change", () => {
+  if ($("#tracking-kind").value === "goals") $("#tracking-name").value = data.tracking?.savedGoals?.title || t("trackingGoals");
+  updateTrackingFields();
+});
+$("#edit-tracking").addEventListener("click", (event) => {
+  trackingProject = {id: projectId, source: data.tasksFile};
+  const scope = data.tracking?.scope || {};
+  trackingItems = scope.items || data.tracking?.savedGoals?.items || [];
+  $("#tracking-kind").value = scope.kind || "auto";
+  $("#tracking-name").value = scope.title || data.tasksFile || "";
+  $("#tracking-goals").value = trackingItems.map((item) => `[${item.done ? "x" : " "}] ${item.title}`).join("\n");
+  $("#tracking-form .form-error").textContent = "";
+  updateTrackingFields(); showDialog($("#tracking-dialog"), event.currentTarget);
+});
+$("#tracking-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const submit = event.currentTarget.querySelector("[type=submit]");
+  if (submit.disabled || !trackingProject) return;
+  submit.disabled = true;
+  const target = trackingProject;
+  try {
+    const kind = $("#tracking-kind").value;
+    const body = {project: target.id, kind, title: $("#tracking-name").value || (kind === "goals" ? t("trackingGoals") : target.source || "")};
+    if (kind === "checklist") {
+      if (!target.source) throw new Error(t("scopeNeedsSource"));
+      body.source = target.source;
+    }
+    if (kind === "goals") body.items = $("#tracking-goals").value.split("\n").filter((line) => line.trim()).map((line) => {
+      const match = line.match(/^\s*(?:[-*+]\s+)?\[([ xX])\]\s*(.+)$/);
+      const title = (match ? match[2] : line).trim();
+      return {id: trackingItems.find((item) => item.title === title)?.id, title, done: Boolean(match && match[1].toLowerCase() === "x")};
+    });
+    await api("/api/scope", body);
+    await closeDialog($("#tracking-dialog"));
+    if (projectId === target.id) { stageId = null; scopeChosen = false; lastSignature = ""; await refresh(); }
+    nativeAction("projects-changed"); toast(t("trackingSaved"));
+  } catch (failure) { $("#tracking-form .form-error").textContent = failure.message; }
+  finally { submit.disabled = false; }
+});
 function render() {
   const {overall, current, next, eta} = data;
+  const measured = !data.tracking || data.tracking.mode === "measured";
   const localizedEta = etaText(eta);
-  setProjectProgress($("#project-progress"), overall);
+  setProjectProgress($("#project-progress"), measured ? overall : null);
   text("#project-title", data.name); text("#mini-name", data.name);
-  text("#mini-eta", localizedEta.label);
+  text("#mini-eta", measured ? localizedEta.label : t(data.tracking?.mode === "tasks" ? "coverageUnknown" : data.tracking?.mode === "status" ? "trackingStatus" : "trackingUnknown"));
   $("#mini-eta").title = localizedEta.detail;
-  renderPercent(overall);
-  text("#overall-count", overall.total ? `${overall.done} / ${overall.total}` : t("noChecklist"));
+  renderPercent(measured ? overall : {total: 0});
+  $("#percent").hidden = !measured;
+  text("#tracking-label", measured ? data.tracking?.title || t("mainChecklist") : t(data.tracking?.mode === "tasks" ? "trackingTasks" : data.tracking?.mode === "status" ? "trackingStatus" : "trackingUnknown"));
+  const visibleCounts = measured ? overall : data.tracking?.counts;
+  text("#overall-count", visibleCounts?.total ? `${visibleCounts.done} / ${visibleCounts.total}` : "");
+  $("#content").classList.toggle("unmeasured", !measured);
   const bar = $("#overall-bar");
-  bar.setAttribute("role", overall.total ? "progressbar" : "img");
+  bar.setAttribute("role", measured && overall.total ? "progressbar" : "img");
   bar.setAttribute("aria-label", t(overall.total ? "progressLabel" : "waiting"));
-  if (overall.total) bar.setAttribute("aria-valuenow", overall.percent); else bar.removeAttribute("aria-valuenow");
+  if (measured && overall.total) bar.setAttribute("aria-valuenow", overall.percent); else bar.removeAttribute("aria-valuenow");
   bar.setAttribute("aria-valuetext", overall.total ? t("progressValue", overall) : t("noProgress"));
-  requestAnimationFrame(() => { $(".bar-fill").style.width = `${overall.percent}%`; });
+  requestAnimationFrame(() => { $(".bar-fill").style.width = `${measured ? overall.percent : 0}%`; });
   $("#content").classList.toggle("no-plan", data.state === "no-plan");
-  text("#active-source", data.tasksFile || t("choosePlan"));
+  text("#active-source", data.tracking?.basis === "goals" ? t("trackingGoals") : data.tasksFile || t("choosePlan"));
   $("#choose-source").title = data.tasksFile || t("choosePlan");
   text("#method", t(data.state === "no-plan" ? "noPlanMethod" : modular() ? "moduleMethod" : data.milestonesSeparate ? "method" : "groupedMethod"));
-  text("#current-kind", t(modular() ? current ? "currentModule" : "workStructure" : data.groupKind === "section" ? "currentGroup" : "currentLevel"));
+  text("#current-kind", t(data.work?.kind === "observed" ? "trackingTasks" : modular() ? current ? "currentModule" : "workStructure" : data.groupKind === "section" ? "currentGroup" : "currentLevel"));
   text("#current-title", current ? shortTitle(current.title) : modular() ? moduleCount(data.work.groupCount) : t(overall.total ? "mainChecklist" : "waiting"));
   text("#phase-count", modular() ? workTaskCount(current?.total ?? data.work.taskCount) : current ? `${current.done} / ${current.total}` : overall.total ? `${overall.done} / ${overall.total}` : "—");
-  $(".current-summary").hidden = !current && !modular();
+  $(".current-summary").hidden = data.tracking?.mode === "tasks" || !current && !modular();
   $("#view-current").hidden = !current && !modular();
   text("#next-kind", t(data.nextKind === "ready" ? "plannedNext" : data.nextKind === "active" ? "activeTask" : "next"));
-  text("#next-task", next ? `${/^(line-|heading-)/.test(next.id) ? "" : `${next.id} · `}${next.title}` : t(data.state === "no-plan" ? "nextNoPlan" : modular() ? "noReadyTask" : "checklistComplete"));
+  text("#next-task", next ? `${/^(line-|heading-|goal-)/.test(next.id) ? "" : `${next.id} · `}${next.title}` : t(data.state === "no-plan" ? "nextNoPlan" : modular() ? "noReadyTask" : "checklistComplete"));
   text("#mini-current", modular() ? moduleCount(data.work.groupCount) : current ? current.title.replace(/^持续实施及/, "") : next?.title || t(data.state === "no-plan" ? "waiting" : "completeShort"));
   text("#mini-phase-count", modular() ? workTaskCount(data.work.taskCount) : current ? `${current.done}/${current.total}` : "");
   text("#work-warning", (data.warnings || []).map((item) => `${item.file} · ${I18N.error(item.message, language)}`).join(language === "zh" ? "；" : "; "));
@@ -484,7 +558,7 @@ function render() {
   $("#eta-label").title = localizedEta.detail;
   $("#eta-label").setAttribute("aria-description", localizedEta.detail);
   $("#estimate").disabled = overall.done === overall.total;
-  renderTasks();
+  renderTracking(); renderTasks();
   renderMilestones(); renderContext();
   text("#dependency-count", t("dependencies", {count: data.dependencies}));
   $("#dependency-note").hidden = !data.dependencies;
@@ -514,17 +588,18 @@ async function refresh(manual = false) {
     const signature = JSON.stringify([result.revision, result.sources, result.primary, result.eta, result.activity, result.context, result.warnings, result.groups]);
     const firstPaint = !data || data.id !== result.id;
     const changed = data && data.revision !== result.revision;
+    const previousTotal = data?.tracking?.mode === "measured" && result.tracking?.mode === "measured" ? data.overall.total : null;
     $("#authorize-project").hidden = true;
     data = result;
     if (modular() && !scopeChosen) stageId = "work";
-    if (firstPaint && data.state === "no-plan") setResourceView(true);
     if (signature !== lastSignature) { render(); lastSignature = signature; }
     updateReadTime();
     $("#error").hidden = true; $("#loading").hidden = true; $("#content").hidden = false;
     $("#repair-source").hidden = true;
     renderSyncState();
     if (firstPaint) animatePage();
-    if (changed) toast(t("updated"));
+    if (previousTotal !== null && previousTotal !== result.overall.total) toast(t("scopeChanged", {before: previousTotal, after: result.overall.total}));
+    else if (changed) toast(t("updated"));
     else if (manual) toast(t("refreshed"));
   } catch (failure) { if (projectId === selected) {
     if (failure.status === 403) { data = null; lastSignature = ""; $("#content").hidden = true; }
@@ -700,7 +775,7 @@ async function openSourceDialog(event) {
       const button = node("button", "source-option"); button.type = "button";
       button.classList.toggle("active", choice.file === result.selected);
       button.setAttribute("aria-pressed", String(choice.file === result.selected));
-      button.append(node("strong", "", choice.file), node("small", "", choice.total ? t("planCount", choice) : workTaskCount(choice.workTasks || 0)));
+      button.append(node("strong", "", choice.file), node("small", "", `${choice.total ? t("planCount", choice) : workTaskCount(choice.workTasks || 0)} · ${t(`sourceReason_${choice.reason || "conventional"}`)}`));
       button.addEventListener("click", () => {
         $("#source-path").value = choice.file;
         document.querySelectorAll(".source-option").forEach((option) => { option.classList.toggle("active", option === button); option.setAttribute("aria-pressed", String(option === button)); });

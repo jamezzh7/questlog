@@ -73,7 +73,7 @@ class LocalAPI:
                     raise ValueError("请求路径不正确")
                 if url.path == "/api/projects":
                     self.authorize(str(payload.get("root", "")))
-                if url.path in {"/api/sources", "/api/estimates"}:
+                if url.path in {"/api/sources", "/api/estimates", "/api/scope"}:
                     project = next((p for p in config["projects"] if p["id"] == payload.get("project")), None)
                     if project is None:
                         raise ValueError("项目不存在")
@@ -125,7 +125,9 @@ class LocalAPI:
             return {"file": relative, "text": read_document(source_path(root, relative))}
         if endpoint == "/api/sources":
             choices = find_task_files(root)
-            return {"selected": project.get("tasksFile") or (choices[0]["file"] if choices else None), "choices": choices}
+            available = [item for item in choices if not item.get("obsolete")]
+            selected = (available[0]["file"] if available else None) if project.get("autoTasks") else project.get("tasksFile")
+            return {"selected": selected, "choices": choices}
         return get_progress(project, activity_reader=self.activity_reader)
 
     def mutate(self, config, endpoint, payload):
@@ -138,6 +140,46 @@ class LocalAPI:
                 raise ValueError("不支持的外观设置")
             config.update(payload)
             result = {"language": config.get("language", "auto"), "appearance": config.get("appearance", "auto")}
+        elif endpoint == "/api/scope":
+            project = next(p for p in config["projects"] if p["id"] == payload.get("project"))
+            kind, title = payload.get("kind"), payload.get("title", "")
+            if kind not in ("auto", "checklist", "goals") or not isinstance(title, str) or len(title) > 100:
+                raise ValueError("跟踪范围不正确")
+            scope = {"kind": kind, "title": title.strip()}
+            if kind == "checklist":
+                relative = payload.get("source")
+                if not isinstance(relative, str) or not relative:
+                    raise ValueError("请选择任务文档")
+                path = source_path(Path(project["root"]).expanduser().resolve(), relative)
+                relative = str(path.relative_to(Path(project["root"]).expanduser().resolve()))
+                probe = get_progress({**project, "tasksFile": relative, "autoTasks": False, "trackingScope": {}}, include_context=False)
+                if not probe["primary"] and not probe.get("groups"):
+                    raise ValueError("任务文档中没有找到可统计的复选任务")
+                scope["source"] = relative
+                project.update(tasksFile=relative, autoTasks=False)
+            elif kind == "goals":
+                items = payload.get("items")
+                if not isinstance(items, list) or not 1 <= len(items) <= 20:
+                    raise ValueError("请填写 1–20 个目标")
+                validated, seen = [], set()
+                previous = {item["id"] for item in project.get("savedGoals", project.get("trackingScope", {})).get("items", [])}
+                for item in items:
+                    if not isinstance(item, dict) or not isinstance(item.get("title"), str) or not 1 <= len(item["title"].strip()) <= 200 or type(item.get("done")) is not bool:
+                        raise ValueError("目标格式不正确")
+                    name = item["title"].strip()
+                    if name.casefold() in seen:
+                        raise ValueError("目标名称重复")
+                    seen.add(name.casefold())
+                    identity = item.get("id")
+                    validated.append({"id": identity if isinstance(identity, str) and identity in previous else "goal-" + uuid.uuid4().hex[:12], "title": name, "done": item["done"]})
+                if len({item["id"] for item in validated}) != len(validated):
+                    raise ValueError("目标格式不正确")
+                scope["items"] = validated
+                project["savedGoals"] = dict(scope)
+            else:
+                project["autoTasks"] = True
+            project["trackingScope"] = scope
+            result = {"scope": scope}
         elif endpoint == "/api/connections":
             result = connect_discovered(config, payload.get("provider"), payload.get("project"), **self.discovery_options(payload.get("provider")))
         elif endpoint == "/api/projects/remove":
@@ -177,6 +219,8 @@ class LocalAPI:
             elif not project.get("tasksFile"):
                 project["primaryIds"] = primary_ids(tasks)
             project.update({"tasksFile": relative, "autoTasks": False})
+            if project.get("trackingScope", {}).get("kind") in {"checklist", "goals"}:
+                project["trackingScope"] = {"kind": "checklist", "source": relative, "title": relative}
             get_progress(project, include_context=False)
             result = {"file": relative}
         elif endpoint == "/api/projects":
@@ -212,7 +256,10 @@ class LocalAPI:
             hours = payload.get("hoursPerDay", 4)
             if isinstance(hours, bool) or not isinstance(hours, (int, float)) or not math.isfinite(hours) or not 0 < hours <= 24:
                 raise ValueError("每日工时应大于 0 且不超过 24")
-            project["estimates"], project["hoursPerDay"] = estimates, hours
+            if project.get("trackingScope", {}).get("kind") == "goals":
+                project["goalEstimates"], project["goalHoursPerDay"] = estimates, hours
+            else:
+                project["estimates"], project["hoursPerDay"] = estimates, hours
             result = {"ok": True}
         else:
             raise MissingResource("未找到")
