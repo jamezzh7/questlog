@@ -60,6 +60,7 @@
     progressLabel: ["主验收清单完成比例", "Main checklist progress", "Avancement de la liste principale"], waiting: ["等待任务清单", "Waiting for a checklist", "En attente d’une liste"],
     progressValue: ["{total} 项中完成 {done} 项，{percent}%", "{done} of {total} complete ({percent}%)", "{done} sur {total} terminées ({percent} %)"],
     noProgress: ["尚无任务清单，未计算完成比例", "No checklist found; progress has not been calculated", "Aucune liste trouvée ; l’avancement n’a pas été calculé"],
+    progressUnavailable: ["暂时无法读取项目进度", "Project progress is currently unavailable", "L’avancement du projet est momentanément indisponible"],
     remaining: ["剩余主验收任务：{count} 项", "Remaining checklist items: {count}", "Éléments restants dans la liste principale : {count}"], connectedWaiting: ["项目已连接 · 等待任务清单", "Connected · waiting for a checklist", "Projet connecté · en attente d’une liste"],
     details: ["详情", "Details", "Détails"], method: ["主清单等权计数；阶段子任务单独统计。百分比不代表工时完成度。", "Main checklist items have equal weight. Milestones are counted separately. This is not an estimate of work hours.", "Les éléments de la liste principale ont le même poids. Les étapes sont comptées séparément. Ce pourcentage ne mesure pas les heures de travail."],
     noPlanMethod: ["尚无任务清单，暂不计算完成比例。发现任务清单后会自动开始跟踪。", "No checklist yet. Tracking will start automatically when a task plan is found.", "Aucune liste pour le moment. Le suivi commencera automatiquement dès qu’un plan sera trouvé."],

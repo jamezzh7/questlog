@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fill each sidebar project icon and the selected project’s heading icon clockwise according to its main checklist progress, with sidebar completion counts and percentages in tooltips and accessible labels.
+- Refresh progress for all connected sidebar projects, including inactive ones; show a dashed circle while loading or when a checklist is missing or unavailable.
+
 ## 0.13.0
 
 - Add a native menu bar popover with progress rings, checklist counts and percentages for all connected projects.

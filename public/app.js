@@ -11,6 +11,9 @@ const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)"
 let projectId = new URLSearchParams(location.search).get("project") || localStorage.getItem("questlog.project") || null;
 let data = null;
 let projects = [];
+let projectProgress = new Map();
+let projectProgressLoading = false;
+let projectProgressGeneration = 0;
 let filter = "all";
 let loading = false;
 let full = Boolean(nativeAPI) || new URLSearchParams(location.search).get("view") === "full";
@@ -144,6 +147,7 @@ function setView(expanded) {
   const url = new URL(location.href);
   url.searchParams.set("view", full ? "full" : "mini");
   if (!nativeAPI) history.replaceState(null, "", url);
+  if (full) refreshProjectProgress();
 }
 document.body.classList.toggle("native", native);
 setView(full);
@@ -155,7 +159,7 @@ $("#privacy").addEventListener("click", async (event) => {
 });
 $("#privacy-online").addEventListener("click", () => api("/api/privacy/open", {}).catch((failure) => error(failure.message)));
 $("#reset-permissions").addEventListener("click", async () => {
-  try { const result = await api("/api/permissions/reset", {}); if (!result.cancelled) { await closeDialog($("#settings-dialog")); lastSignature = ""; await refresh(); } }
+  try { const result = await api("/api/permissions/reset", {}); if (!result.cancelled) { projectProgressGeneration++; projectProgress.clear(); updateProjectProgress(); await closeDialog($("#settings-dialog")); lastSignature = ""; await refresh(); } }
   catch (failure) { error(failure.message); }
 });
 if (nativeAPI) { $("#privacy").hidden = false; $("#reset-permissions").hidden = false; }
@@ -251,8 +255,7 @@ function renderProjects() {
   $("#projects").replaceChildren(...projects.map((project) => {
     const entry = node("div", "project-entry"); entry.dataset.project = project.id;
     const button = node("button", `project-button${project.id === projectId ? " active" : ""}`);
-    button.title = project.name;
-    const icon = node("span", "symbol icon-project"); icon.setAttribute("aria-hidden", "true");
+    const icon = node("span", "project-progress unknown"); icon.setAttribute("aria-hidden", "true");
     button.append(icon, node("span", "project-name", project.name));
     if (project.id === projectId) button.setAttribute("aria-current", "page");
     button.addEventListener("click", () => {
@@ -273,9 +276,50 @@ function renderProjects() {
     entry.append(button, remove);
     return entry;
   }));
+  updateProjectProgress();
   if (focusedProject) {
     const entry = [...document.querySelectorAll(".project-entry")].find((item) => item.dataset.project === focusedProject);
     entry?.querySelector(focusedRemove ? ".remove-project" : ".project-button")?.focus({preventScroll: true});
+  }
+}
+function setProjectProgress(icon, overall) {
+  const known = overall?.total > 0 && Number.isFinite(overall.done);
+  icon.classList.toggle("unknown", !known);
+  // Draw the actual fraction, including when the displayed percentage is rounded.
+  icon.style.setProperty("--progress", `${known ? Math.max(0, Math.min(100, overall.done / overall.total * 100)) : 0}%`);
+  return known;
+}
+function updateProjectProgress() {
+  for (const entry of document.querySelectorAll(".project-entry")) {
+    const reading = projectProgress.get(entry.dataset.project);
+    const overall = reading?.overall;
+    const known = setProjectProgress(entry.querySelector(".project-progress"), reading?.state === "ready" ? overall : null);
+    const description = known ? t("progressValue", overall) : t(!reading ? "reading" : reading.state === "permission" ? "accessRequired" : reading.state === "no-plan" ? "noProgress" : "progressUnavailable");
+    const name = entry.querySelector(".project-name").textContent;
+    const button = entry.querySelector(".project-button");
+    button.title = `${name}\n${description}`;
+    button.setAttribute("aria-label", `${name} · ${description}`);
+  }
+}
+async function refreshProjectProgress() {
+  if (projectProgressLoading || !full) return;
+  if (!projects.length) { projectProgress.clear(); return; }
+  projectProgressLoading = true;
+  const connectedProjects = projects;
+  const generation = projectProgressGeneration;
+  try {
+    // The shared overview only reads checklists, with per-project access checks.
+    const result = await api("/api/project-overview");
+    if (projects !== connectedProjects || generation !== projectProgressGeneration) return;
+    projectProgress = new Map(result.projects.map((project) => [project.id, project]));
+    updateProjectProgress();
+  } catch (failure) {
+    if (projects !== connectedProjects || generation !== projectProgressGeneration) return;
+    projectProgress = new Map(projects.map((project) => [project.id, {state: "unavailable"}]));
+    updateProjectProgress();
+  } finally {
+    projectProgressLoading = false;
+    if (projects !== connectedProjects || generation !== projectProgressGeneration) refreshProjectProgress();
   }
 }
 function selectStage(identity) {
@@ -408,6 +452,7 @@ function renderContext() {
 function render() {
   const {overall, current, next, eta} = data;
   const localizedEta = etaText(eta);
+  setProjectProgress($("#project-progress"), overall);
   text("#project-title", data.name); text("#mini-name", data.name);
   text("#mini-eta", localizedEta.label);
   $("#mini-eta").title = localizedEta.detail;
@@ -485,7 +530,7 @@ async function refresh(manual = false) {
     error(t("readFailed", {error: failure.message})); $("#authorize-project").hidden = !nativeAPI || failure.status !== 403;
     $("#loading").hidden = true; $("#repair-source").hidden = failure.status === 403; renderSyncState();
   } }
-  finally { loading = false; $("#refresh").classList.remove("is-loading"); if (selected !== projectId) refresh(); }
+  finally { loading = false; $("#refresh").classList.remove("is-loading"); if (selected !== projectId) refresh(); else refreshProjectProgress(); }
 }
 $("#refresh").addEventListener("click", () => refresh(true));
 document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => { filter = button.dataset.filter; renderTasks(); }));
@@ -704,7 +749,7 @@ $("#confirm-remove").addEventListener("click", async (event) => {
     projects = result.projects;
     await closeDialog($("#remove-dialog"));
     if (projectId === target.id) await selectProject(projects[Math.min(index, projects.length - 1)]?.id);
-    else { renderProjects(); if (data) render(); }
+    else { renderProjects(); refreshProjectProgress(); if (data) render(); }
     nativeAction("projects-changed");
     const selected = [...document.querySelectorAll(".project-entry")].find((entry) => entry.dataset.project === projectId);
     (selected?.querySelector(".project-button") || $("#add-project")).focus({preventScroll: true});
