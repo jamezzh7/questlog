@@ -1,11 +1,11 @@
 # View Mac progress on iPhone
 
-The optional iCloud companion is under **Unreleased**. It adds a read-only iPhone app; it is not yet a published iPhone App Store download. Existing local Mac builds still work without iCloud, and sync is off by default.
+The optional iCloud companion is under **Unreleased**. It adds a read-only iPhone app; it is not yet a published iPhone App Store download. Existing local Mac builds still work without iCloud, and make no CloudKit requests. Provisioned iCloud builds automatically sync connected project summaries.
 
 ## Use
 
 1. Install a provisioned `QuestlogCloud` Mac build and `QuestlogPhone` on the iPhone. Both must use the same iCloud account, CloudKit container and environment.
-2. On Mac, choose **Questlog → iPhone sync…**, give the Mac a display name, select 1–50 projects, enable sync and save. New projects are not automatically shared.
+2. Connect a local project in Questlog on the Mac. Its summary syncs automatically; no pairing, project selection or separate Mac-name setup is required. New connections are included automatically.
 3. Open Questlog on iPhone. Pull to refresh or use Refresh. The app refreshes about once per minute while active; background updates are not promised.
 4. Keep the Mac awake with Questlog running. The publisher works when the details window is closed or the widget hidden. Quitting Questlog, sleep, lost file access or network failure stops new usable readings.
 
@@ -15,11 +15,13 @@ Each Mac shows its **capture time**. The phone separately shows its **last succe
 
 ## Data and deletion
 
-The private CloudKit database receives a random Mac identifier, a user-chosen Mac label, random project identifiers, selected project names, scope names, tracking modes, counts, optional scoped percentages, a source-conflict flag and capture time. **Share status text** is a separate, initially off option, limited to four short fields per project. Review text for confidential content before enabling it; common path redaction cannot remove arbitrary secrets from prose.
+The private CloudKit database receives a random Mac identifier, a Mac display label, random project identifiers, connected, non-excluded project names, scope names, tracking modes, counts, optional scoped percentages, a source-conflict flag and capture time. **Share status text** is a separate, initially off option, limited to four short fields per project. Review text for confidential content before enabling it; common path redaction cannot remove arbitrary secrets from prose.
 
 Local configuration, source documents, file path fields, source filenames/line metadata, Git history, directory bookmarks, transcripts and estimates are not part of the upload. No account/password service, public CloudKit database or developer-operated relay is used. Local HTTP endpoints remain loopback-only; the phone never accesses them.
 
-Changing the saved project selection atomically replaces this Mac's record, removing unselected projects. Choose **Stop and remove** on the originating Mac to delete its cloud snapshot. Keep that Mac online until removal is confirmed; a failed removal persists locally and retries on future launches. Merely quitting/uninstalling the Mac app leaves its last snapshot in iCloud. If the original Mac/settings are lost, manage the app's iCloud data through Apple's storage controls. Removing a connection excludes it from the next successful snapshot but does not change its source files.
+Use **Questlog → iCloud sync…** only to stop syncing, exclude projects, rename the Mac or opt into status text. Uncheck a project and save to exclude it. Up to 50 projects sync at once; if more are connected, existing slots remain stable and spare slots fill automatically. An explicit stop remains off after restarting or connecting another project. Upgrading preserves previous disabled settings and converts formerly unselected connections into exclusions, while future connections join automatically. Existing cloud IDs and account bindings are retained.
+
+Changing connections or saved exclusions atomically replaces this Mac's record, removing unselected projects. Choose **Stop and remove** on the originating Mac to delete its cloud snapshot. Keep that Mac online until removal is confirmed; a failed removal persists locally and retries on future launches. Merely quitting/uninstalling the Mac app leaves its last snapshot in iCloud. If the original Mac/settings are lost, manage the app's iCloud data through Apple's storage controls. Removing a connection excludes it from the next successful snapshot but does not change its source files.
 
 The phone keeps a bounded offline copy for the verified iCloud identity. An account change clears displayed data, navigation and the disk cache. When offline, a previously verified-account cache may remain visible with the last fetch time; a cold launch that cannot verify identity does not reveal another account's cached data. Settings can clear the local copy; a later successful refresh may cache a new copy. The phone has no task editing, job control or Mac configuration endpoints.
 

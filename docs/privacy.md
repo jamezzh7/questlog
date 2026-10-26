@@ -1,8 +1,8 @@
 # Privacy and local data
 
-Last updated: October 25, 2026. [简体中文](privacy.zh-CN.md) · [Français](privacy.fr.md)
+Last updated: October 26, 2026. [简体中文](privacy.zh-CN.md) · [Français](privacy.fr.md)
 
-Questlog has no registration/password service, analytics, advertising, model integration or developer-operated backend. Unreleased builds add optional iCloud sync to a read-only iPhone companion; it is off by default. This describes the app; README badge images are separately requested by your browser when viewing the repository.
+Questlog has no registration/password service, analytics, advertising, model integration or developer-operated backend. Provisioned Unreleased iCloud builds automatically sync connected project summaries to a read-only iPhone companion; you can stop sync or exclude projects. Unprovisioned local builds make no CloudKit requests. This describes the app; README badge images are separately requested by your browser when viewing the repository.
 
 ## What Questlog reads
 
@@ -34,11 +34,11 @@ The store build embeds its runtime and uses an in-process bridge. It does not ru
 
 ## Optional iCloud companion (Unreleased)
 
-Only after you enable sync and select projects, the native Mac publisher sends allowlisted snapshots to **your private CloudKit database** operated by Apple. A snapshot contains random device/project IDs, a chosen Mac label, selected project and scope names, tracking modes, counts, a source-conflict flag, optional scoped percentages and a capture timestamp. No local path fields, source files, filenames/line metadata, Git history, access bookmarks, conversations or estimates are included. Status prose is a separate, initially off option, limited to four short fields per project; it can contain confidential content and needs your review. Common inline-path redaction does not guarantee removal of secrets from prose.
+By default, the provisioned Mac publisher automatically sends allowlisted summaries of connected, non-excluded projects (up to 50 at once) to **your private CloudKit database** operated by Apple. A snapshot contains random device/project IDs, a Mac display label, connected project and scope names, tracking modes, counts, a source-conflict flag, optional scoped percentages and a capture timestamp. No local path fields, source files, filenames/line metadata, Git history, access bookmarks, conversations or estimates are included. Status prose is a separate, initially off option, limited to four short fields per project; it can contain confidential content and needs your review. Common inline-path redaction does not guarantee removal of secrets from prose.
 
 The publisher refreshes about once per minute while Questlog is running and the Mac is awake, independently of the detail window. The phone reads snapshots with the same iCloud account and environment, and keeps a bounded local cache after verifying the account identity. Account changes clear phone data and stop Mac publishing until re-enabled. The developer has no app server receiving these snapshots. Apple's iCloud terms and storage rules apply.
 
-Save a changed selection to remove unselected projects from the next cloud snapshot. On the originating Mac, choose **iPhone sync → Stop and remove** to delete its record. Failed deletion is retained locally and retried; keep the Mac online until confirmed. Quitting or uninstalling does not remove the cloud record. If the Mac/settings are lost, use Apple's app-specific iCloud storage controls. On iPhone, Settings can clear the offline copy; subsequent successful refreshes may create a new cache. See [setup, limits and retention](icloud-sync.md).
+New connections join automatically; saving exclusions or removing a connection removes those projects from the next successful cloud snapshot. An explicit stop persists across launches and new connections. Upgrades retain previous disabled settings, exclusions and cloud identities. On the originating Mac, choose **iCloud sync → Stop and remove** to delete its record. Failed deletion is retained locally and retried; keep the Mac online until confirmed. Quitting or uninstalling does not remove the cloud record. If the Mac/settings are lost, use Apple's app-specific iCloud storage controls. On iPhone, Settings can clear the offline copy; subsequent successful refreshes may create a new cache. See [setup, limits and retention](icloud-sync.md).
 
 ## Local HTTP service in source builds
 

@@ -12,6 +12,7 @@ final class MacPublisher {
     private(set) var status = ""
     private(set) var lastSuccess: Date?
     var onChange: (() -> Void)?
+    var connectedProjects: (() throws -> [String])?
     var read: (([String], Bool, @escaping (Result<Data, Error>) -> Void) -> Void)?
     private var timer: Timer?
     private var observer: NSObjectProtocol?
@@ -21,12 +22,13 @@ final class MacPublisher {
     private var failures = 0
     private var requested = false
     private var stopped = false
+    private var unreadablePreferences = false
 
     init(file: URL, cloud: SnapshotCloud = CloudKitTransport(), supported: Bool = CloudKitTransport.supported) {
         self.file = file; self.cloud = cloud; self.supported = supported
         do { preferences = try SyncPreferences.read(file) }
         catch {
-            preferences = SyncPreferences()
+            preferences = SyncPreferences(); preferences.enabled = false; unreadablePreferences = true
             status = text("Sync settings could not be read. Sync is off; review and save your selection.", "同步设置无法读取，已关闭同步；请核对后重新保存。", "Impossible de lire les réglages de synchronisation. Vérifiez-les et enregistrez-les à nouveau.")
         }
     }
@@ -35,32 +37,61 @@ final class MacPublisher {
         guard timer == nil else { return }
         observer = NotificationCenter.default.addObserver(forName: .CKAccountChanged, object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
-            self.generation += 1; self.preferences.enabled = false; self.preferences.pendingDelete = false; self.preferences.accountKey = nil
+            // Notifications can repeat for the same account. Verify identity before
+            // changing saved preferences; the bound-account check still prevents a new account upload.
+            self.generation += 1; self.requested = true
             self.lastSuccess = nil
-            do { try self.preferences.save(self.file); self.status = CloudFailure.changedAccount.message(language: self.language()) }
-            catch { self.status = error.localizedDescription }
-            self.onChange?()
+            self.failures = 0; self.nextAttempt = .distantPast; self.tick(force: true)
         }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.tick() }
         timer?.tolerance = 10; tick()
     }
     func stop() { stopped = true; timer?.invalidate(); timer = nil; task?.cancel() }
-    func save(enabled: Bool, name: String, selected: [String], includeText: Bool) throws {
+    func reconcileConnections() throws {
+        guard !unreadablePreferences, let connectedProjects else { return }
+        var updated = preferences
+        try updated.connect(connectedProjects())
+        guard updated != preferences else { return }
+        try updated.save(file); preferences = updated
+        generation += 1; requested = true
+        if failures == 0 { nextAttempt = .distantPast }
+        onChange?()
+    }
+    func save(enabled: Bool, name: String, selected: [String], includeText: Bool, displayed: [String]? = nil) throws {
         let label = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !label.isEmpty, label.count <= 60, selected.count <= 50, selected.allSatisfy({ !$0.isEmpty && $0.count <= 200 }), !enabled || !selected.isEmpty else { throw SnapshotFailure.invalid }
+        guard !label.isEmpty, label.count <= 60, selected.count <= 50, selected.allSatisfy({ !$0.isEmpty && $0.count <= 200 }) else { throw SnapshotFailure.invalid }
         if enabled && !supported { throw CloudFailure.build }
         var updated = preferences
-        updated.enabled = enabled; updated.deviceName = label; updated.select(selected); updated.includeText = includeText
+        updated.enabled = enabled; updated.deviceName = label; updated.includeText = includeText
+        // Only the rows shown to the user are edited; newly connected projects stay automatic.
+        let connected = enabled ? try connectedProjects?() : nil
+        let rows = Set(displayed ?? connected ?? Array(Set(preferences.selected + selected)))
+        guard Set(selected).isSubset(of: rows), rows.count <= 5_000 else { throw SnapshotFailure.invalid }
+        updated.excluded = Array(Set(updated.excluded).subtracting(rows).union(rows.subtracting(selected))).sorted()
+        updated.automaticProjects = true
+        if let connected { try updated.connect(connected) }
+        else { updated.select(selected) }
         updated.pendingDelete = !enabled && (preferences.enabled || preferences.pendingDelete || preferences.accountKey != nil)
         // Explicitly enabling after an account change consents to this account.
         if enabled && !preferences.enabled { updated.accountKey = nil }
-        try updated.save(file); preferences = updated
+        try updated.save(file); preferences = updated; unreadablePreferences = false
         generation += 1; failures = 0; nextAttempt = .distantPast; requested = true
         status = enabled ? text("Waiting to sync…", "等待同步…", "En attente de synchronisation…") : updated.pendingDelete ? text("Removal pending; keep this Mac online.", "等待从 iCloud 移除，请保持这台 Mac 联网。", "Suppression en attente ; gardez ce Mac en ligne.") : text("Sync is off.", "同步已关闭。", "Synchronisation désactivée.")
         onChange?(); tick(force: true)
     }
     func tick(force: Bool = false) {
-        guard !stopped, preferences.enabled || preferences.pendingDelete else { return }
+        guard !stopped, supported else { return }
+        do { if preferences.enabled { try reconcileConnections() } }
+        catch {
+            generation += 1; requested = true
+            status = text("Unable to read connected projects. Will retry automatically.", "暂时无法读取已连接项目，将自动重试。", "Impossible de lire les projets connectés. Une nouvelle tentative sera automatique.")
+            onChange?(); return
+        }
+        guard preferences.enabled || preferences.pendingDelete else { return }
+        if preferences.enabled && preferences.selected.isEmpty && preferences.accountKey == nil {
+            status = text("Connected projects sync automatically. Connect a project to begin.", "已连接项目会自动同步，连接项目即可开始。", "Les projets connectés se synchronisent automatiquement. Connectez un projet pour commencer.")
+            onChange?(); return
+        }
         if force { requested = true; if failures == 0 { nextAttempt = .distantPast } }
         guard task == nil, Date() >= nextAttempt else { return }
         requested = false

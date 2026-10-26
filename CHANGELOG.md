@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Add opt-in Mac → private iCloud snapshots and a read-only iPhone companion with scoped progress, foreground refresh, account-bound offline caching and stale-data labels. Share only selected projects; status prose is a separate opt-in. CloudKit requires provisioned builds and matching environments; see `docs/icloud-sync.md`.
+- Automatically sync connected Mac project summaries to the same iCloud account without a separate setup step; retain exclusions, explicit stop, stable cloud identities and an independent status-text opt-in.
+- Add Mac → private iCloud snapshots and a read-only iPhone companion with scoped progress, foreground refresh, account-bound offline caching and stale-data labels. Share connected, non-excluded projects; status prose is a separate opt-in. CloudKit requires provisioned builds and matching environments; see `docs/icloud-sync.md`.
 - Add independent Mac publishing, opaque remote identifiers, durable stop/remove retries and account-change handling; keep the existing local launcher available without cloud capabilities.
 - Show scoped completion, detected task counts, explicit project state or an unknown state according to the available evidence; keep percentages out of incomplete plans across native and web views.
 - Prefer current and explicitly linked task plans, exclude README setup checks and historical examples, and combine bounded sources without double-counting matching tasks.

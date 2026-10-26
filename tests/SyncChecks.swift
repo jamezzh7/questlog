@@ -11,7 +11,8 @@ actor FakeCloud: SnapshotCloud {
     var values: [DeviceSnapshot] = []
     var calls = 0
     var failing = false
-    func identity() async throws -> String { calls += 1; return account }
+    var signedIn = true
+    func identity() async throws -> String { calls += 1; if !signedIn { throw CloudFailure.noAccount }; return account }
     func publish(_ snapshot: DeviceSnapshot) async throws {
         calls += 1; if failing { throw CheckFailure.offline }
         try snapshot.validate(); values = [snapshot]
@@ -21,6 +22,7 @@ actor FakeCloud: SnapshotCloud {
         values.removeAll { $0.id == deviceID }
     }
     func fetch() async throws -> [DeviceSnapshot] { calls += 1; if failing { throw CheckFailure.offline }; return values }
+    func setSignedIn(_ value: Bool) { signedIn = value }
     func setFailing(_ value: Bool) { failing = value }
     func setAccount(_ value: String) { account = value }
     func setValues(_ value: [DeviceSnapshot]) { values = value }
@@ -58,13 +60,113 @@ actor FakeCloud: SnapshotCloud {
 
         let prefsFile = directory.appendingPathComponent("sync.json")
         var preferences = try SyncPreferences.read(prefsFile)
-        try expect(!preferences.enabled && !FileManager.default.fileExists(atPath: prefsFile.path), "Default off, no write")
+        try expect(preferences.enabled && preferences.automaticProjects && !FileManager.default.fileExists(atPath: prefsFile.path), "Automatic sync by default, no write before connecting")
         preferences.select(["private-local-id"]); let opaque = preferences.projectIDs["private-local-id"]!
         preferences.select([]); preferences.select(["private-local-id"])
         try expect(preferences.projectIDs["private-local-id"] == opaque, "Stable opaque project ID")
         try preferences.save(prefsFile)
         let savedPreferences = try SyncPreferences.read(prefsFile)
         try expect(savedPreferences == preferences, "Private settings persist")
+
+        // New projects follow connections without a sync settings visit.
+        var autoPreferences = SyncPreferences()
+        try autoPreferences.connect(["first"])
+        let firstID = autoPreferences.projectIDs["first"]
+        try autoPreferences.connect(["first", "second"])
+        try expect(autoPreferences.selected == ["first", "second"] && autoPreferences.projectIDs["first"] == firstID, "New connections auto-join with stable IDs")
+        autoPreferences.excluded = ["second"]
+        try autoPreferences.connect(["first", "second", "third"])
+        try expect(autoPreferences.selected == ["first", "third"], "Exclusions do not prevent future projects auto-joining")
+        try autoPreferences.connect(["third"])
+        try expect(autoPreferences.selected == ["third"], "Disconnected projects leave the snapshot")
+        try autoPreferences.connect((0..<60).map { "project-\($0)" })
+        try expect(autoPreferences.selected.count == 50, "Automatic selection respects the payload limit")
+        let slots = autoPreferences.selected
+        try autoPreferences.connect(["a-new-project"] + (0..<60).map { "project-\($0)" })
+        try expect(autoPreferences.selected == slots, "Overflow does not displace projects already on the phone")
+
+        var legacy = try JSONSerialization.jsonObject(with: JSONEncoder().encode(preferences)) as! [String: Any]
+        legacy.removeValue(forKey: "automaticProjects"); legacy.removeValue(forKey: "excluded")
+        legacy["enabled"] = true
+        let legacyBytes = try JSONSerialization.data(withJSONObject: legacy)
+        var migrated = try JSONDecoder().decode(SyncPreferences.self, from: legacyBytes)
+        try migrated.connect(["private-local-id", "previously-unselected"])
+        try expect(migrated.selected == ["private-local-id"] && migrated.excluded == ["previously-unselected"], "Upgrade retains old explicit exclusions")
+        try expect(migrated.projectIDs["private-local-id"] == opaque, "Upgrade preserves remote project identity")
+        migrated.enabled = false
+        try migrated.connect(["private-local-id", "previously-unselected", "future-project"])
+        try expect(!migrated.enabled && migrated.selected.contains("future-project"), "An explicit stop survives new connections")
+
+        let autoCloud = FakeCloud()
+        let autoFile = directory.appendingPathComponent("automatic.json")
+        let automatic = MacPublisher(file: autoFile, cloud: autoCloud, supported: true)
+        var connections = ["first"]
+        automatic.connectedProjects = { connections }
+        automatic.read = { ids, _, completion in
+            completion(Result { try JSONEncoder().encode(["projects": ids.map { id -> SnapshotProject in var local = project; local.id = id; return local }]) })
+        }
+        automatic.start()
+        try await wait { await autoCloud.values.first?.projects.count == 1 }
+        connections = ["first", "second"]; automatic.tick()
+        try await wait { await autoCloud.values.first?.projects.count == 2 }
+        let automaticIDs = automatic.preferences.projectIDs
+        try automatic.save(enabled: true, name: "Test Mac", selected: ["first"], includeText: false, displayed: connections)
+        try await wait { await autoCloud.values.first?.projects.count == 1 }
+        connections.append("third"); automatic.tick()
+        try await wait { await autoCloud.values.first?.projects.count == 2 }
+        try expect(automatic.preferences.selected == ["first", "third"] && !automatic.preferences.includeText, "New connections sync without sharing excluded projects or status text")
+        connections = ["third"]; automatic.tick()
+        try await wait { await autoCloud.values.first?.projects.count == 1 }
+        try automatic.save(enabled: false, name: "Test Mac", selected: automatic.preferences.selected, includeText: false)
+        try await wait { !automatic.preferences.pendingDelete }
+        automatic.stop()
+        let paused = MacPublisher(file: autoFile, cloud: autoCloud, supported: true)
+        connections.append("fourth"); paused.connectedProjects = { connections }
+        let pausedCalls = await autoCloud.calls
+        paused.start(); try await Task.sleep(nanoseconds: 30_000_000)
+        try expect(!paused.preferences.enabled && paused.preferences.projectIDs["first"] == automaticIDs["first"], "Pause and identity persist after restarting")
+        let stillPausedCalls = await autoCloud.calls
+        try expect(stillPausedCalls == pausedCalls, "Paused sync does not contact CloudKit")
+        paused.stop()
+        let unsupportedCloud = FakeCloud()
+        let unsupported = MacPublisher(file: directory.appendingPathComponent("local-only.json"), cloud: unsupportedCloud, supported: false)
+        unsupported.connectedProjects = { ["first"] }; unsupported.start()
+        try await Task.sleep(nanoseconds: 30_000_000)
+        let unsupportedCalls = await unsupportedCloud.calls
+        try expect(unsupportedCalls == 0, "Unprovisioned local builds never call CloudKit")
+        unsupported.stop()
+
+        let signInCloud = FakeCloud(); await signInCloud.setSignedIn(false)
+        let signIn = MacPublisher(file: directory.appendingPathComponent("sign-in.json"), cloud: signInCloud, supported: true)
+        signIn.connectedProjects = { ["first"] }
+        signIn.read = automatic.read
+        signIn.start()
+        try await wait { signIn.status == CloudFailure.noAccount.message(language: signIn.language()) }
+        await signInCloud.setSignedIn(true)
+        NotificationCenter.default.post(name: .CKAccountChanged, object: nil)
+        try await wait { signIn.lastSuccess != nil }
+        try expect(signIn.preferences.enabled, "First iCloud sign-in resumes automatically without a settings visit")
+        let boundAccount = signIn.preferences.accountKey
+        NotificationCenter.default.post(name: .CKAccountChanged, object: nil)
+        try await wait { signIn.lastSuccess != nil }
+        try expect(signIn.preferences.enabled && signIn.preferences.accountKey == boundAccount, "Repeated same-account notifications do not turn sync off")
+        // Stopping and deletion must not depend on a readable project configuration.
+        signIn.connectedProjects = { throw SnapshotFailure.invalid }
+        try signIn.save(enabled: false, name: "Test Mac", selected: signIn.preferences.selected, includeText: false)
+        try await wait { !signIn.preferences.pendingDelete }
+        let signInValues = await signInCloud.values
+        try expect(signInValues.isEmpty, "Stop/remove works even if local connection settings are unreadable")
+        signIn.stop()
+        let corruptFile = directory.appendingPathComponent("corrupt.json")
+        let corruptBytes = Data("invalid settings".utf8); try corruptBytes.write(to: corruptFile)
+        let corruptCloud = FakeCloud()
+        let corrupt = MacPublisher(file: corruptFile, cloud: corruptCloud, supported: true)
+        corrupt.connectedProjects = { ["first"] }; corrupt.start()
+        try await Task.sleep(nanoseconds: 30_000_000)
+        let corruptCalls = await corruptCloud.calls
+        let retainedBytes = try Data(contentsOf: corruptFile)
+        try expect(!corrupt.preferences.enabled && corruptCalls == 0 && retainedBytes == corruptBytes, "Unreadable sync preferences remain off and are preserved for recovery")
+        corrupt.stop()
 
         let fake = FakeCloud()
         let publisherFile = directory.appendingPathComponent("publisher.json")
@@ -78,7 +180,7 @@ actor FakeCloud: SnapshotCloud {
         publisher.start()
         try await Task.sleep(nanoseconds: 30_000_000)
         let offCalls = await fake.calls
-        try expect(offCalls == 0 && reads == 0, "Disabled publisher makes no requests or project reads")
+        try expect(offCalls == 0 && reads == 0, "No connected projects makes no requests or project reads")
         try publisher.save(enabled: true, name: "Test Mac", selected: ["local-id"], includeText: false)
         try await wait { publisher.lastSuccess != nil }
         let uploaded = await fake.values
@@ -106,9 +208,10 @@ actor FakeCloud: SnapshotCloud {
             if ids == ["old"] { firstReply = reply }
             else { reply(.success(Data("{\"projects\":[]}".utf8))) }
         }
-        try gated.save(enabled: true, name: "Test Mac", selected: ["old"], includeText: false)
+        var changingConnections = ["old"]
+        gated.connectedProjects = { changingConnections }; gated.start()
         try await wait { firstReply != nil }
-        try gated.save(enabled: true, name: "Test Mac", selected: ["new"], includeText: false)
+        changingConnections = ["new"]; gated.tick()
         firstReply?(.success(Data("{\"projects\":[]}".utf8)))
         try await wait { gated.lastSuccess != nil }
         let selection = await fake.values
@@ -143,6 +246,6 @@ actor FakeCloud: SnapshotCloud {
         await preview.refresh(manual: true)
         let previewCalls = await previewCloud.calls
         try expect(previewCalls == 0, "Preview cannot contact CloudKit")
-        print("Sync checks passed: validation, opaque IDs, default off, publish, deletion retry, selection race, account changes, offline cache and preview isolation.")
+        print("Sync checks passed: validation, opaque IDs, automatic connections, exclusions, migration, pause, publish, deletion retry, selection race, account changes, offline cache and preview isolation.")
     }
 }

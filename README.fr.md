@@ -18,13 +18,13 @@
 
 Questlog lit les plans de tâches que vous conservez déjà dans vos projets. Consultez le widget natif de **300 × 120 points**, ouvrez les détails quand vous avez besoin de contexte, puis reprenez votre travail.
 
-Aucune inscription à Questlog, clé d’API, intégration de modèle ni paquet tiers à installer pour l’exécution. Les fichiers sources restent sur le Mac ; le partage de résumés via iCloud est facultatif.
+Aucune inscription à Questlog, clé d’API, intégration de modèle ni paquet tiers à installer pour l’exécution. Les fichiers sources restent sur le Mac ; les versions iCloud synchronisent automatiquement les résumés des projets connectés.
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/details-dark.jpg"><img src="docs/images/details.jpg" width="1000" alt="La fenêtre de détails de Questlog présente les modules et les états des tâches du projet fictif Orbit"></picture></p>
 
 Captures de l’application native actuelle avec le projet fictif [Orbit](examples/orbit/tasks.md). Les aperçus suivent l’apparence claire ou sombre et ne contiennent aucune donnée personnelle.
 
-**Compagnon iPhone facultatif (Unreleased).** Consultez les résumés choisis sur Mac via votre compte iCloud privé, avec détails en lecture seule et indication des copies hors ligne/anciennes. Des versions provisionnées sont nécessaires. [Configuration et limites](docs/icloud-sync.md).
+**Compagnon iPhone facultatif (Unreleased).** Les résumés des projets connectés sur Mac apparaissent automatiquement via votre compte iCloud privé, avec détails en lecture seule et indication des copies hors ligne/anciennes. Des versions provisionnées sont nécessaires. [Configuration et limites](docs/icloud-sync.md).
 
 ## Fonctionnalités
 
@@ -107,7 +107,7 @@ Les tâches des modules conservent les états explicites du document source : en
 
 Questlog lit les fichiers Markdown connectés et, lorsque les détails sont ouverts, une sélection limitée de documents du projet et de métadonnées Git récentes. La découverte facultative de projets lit les métadonnées des dossiers locaux de Codex ou de Claude Code. Elle ne lit pas les conversations et n’appelle pas leurs modèles.
 
-L’application enregistre ses propres réglages de connexion, de langue, d’apparence, de périmètre, d’objectifs simples et d’estimation. Elle ne modifie ni les projets suivis ni les registres des outils. Le service de détails écoute uniquement sur `127.0.0.1`, sans analyse d’utilisation ni serveur exploité par le développeur. Le compagnon iPhone peut recevoir des résumés sélectionnés via votre base iCloud privée. Consultez les [informations sur la confidentialité](docs/privacy.md).
+L’application enregistre ses propres réglages de connexion, de langue, d’apparence, de périmètre, d’objectifs simples et d’estimation. Elle ne modifie ni les projets suivis ni les registres des outils. Le service de détails écoute uniquement sur `127.0.0.1`, sans analyse d’utilisation ni serveur exploité par le développeur. Le compagnon iPhone reçoit automatiquement les résumés des projets connectés via votre base iCloud privée ; vous pouvez arrêter ou exclure des projets. Consultez les [informations sur la confidentialité](docs/privacy.md).
 
 ## Raccourcis
 

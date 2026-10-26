@@ -56,15 +56,48 @@ struct DeviceSnapshot: Codable, Equatable, Identifiable {
 }
 
 struct SyncPreferences: Codable, Equatable {
-    var enabled = false
+    var enabled = true
     var deviceID = UUID().uuidString
     var deviceName = "My Mac"
     var projectIDs: [String: String] = [:]
     var selected: [String] = []
+    var automaticProjects = true
+    var excluded: [String] = []
     var includeText = false
     var pendingDelete = false
     // A restored preference file cannot silently upload to another iCloud account.
     var accountKey: String?
+    init() {}
+    private enum CodingKeys: String, CodingKey {
+        case enabled, deviceID, deviceName, projectIDs, selected, automaticProjects, excluded, includeText, pendingDelete, accountKey
+    }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try values.decode(Bool.self, forKey: .enabled)
+        deviceID = try values.decode(String.self, forKey: .deviceID)
+        deviceName = try values.decode(String.self, forKey: .deviceName)
+        projectIDs = try values.decode([String: String].self, forKey: .projectIDs)
+        selected = try values.decode([String].self, forKey: .selected)
+        automaticProjects = try values.decodeIfPresent(Bool.self, forKey: .automaticProjects) ?? false
+        excluded = try values.decodeIfPresent([String].self, forKey: .excluded) ?? []
+        includeText = try values.decode(Bool.self, forKey: .includeText)
+        pendingDelete = try values.decode(Bool.self, forKey: .pendingDelete)
+        accountKey = try values.decodeIfPresent(String.self, forKey: .accountKey)
+    }
+    // Reconcile connection IDs only; reading project files remains behind the normal access checks.
+    mutating func connect(_ ids: [String]) throws {
+        let connected = Set(ids)
+        guard connected.count <= 5_000, connected.allSatisfy({ !$0.isEmpty && $0.count <= 200 }) else { throw SnapshotFailure.invalid }
+        if !automaticProjects {
+            // Preserve explicit exclusions from the former manual-selection workflow.
+            excluded = Array(Set(excluded).union(connected.subtracting(selected))).sorted()
+            automaticProjects = true
+        }
+        let available = connected.subtracting(excluded).sorted()
+        // Keep existing slots stable when more than fifty projects are connected.
+        let kept = selected.filter { available.contains($0) }
+        select(Array((kept + available.filter { !kept.contains($0) }).prefix(50)))
+    }
     static func read(_ url: URL) throws -> SyncPreferences {
         guard FileManager.default.fileExists(atPath: url.path) else { return Self() }
         let data = try Data(contentsOf: url)
@@ -73,6 +106,8 @@ struct SyncPreferences: Codable, Equatable {
         guard UUID(uuidString: value.deviceID) != nil, !value.deviceName.isEmpty, value.deviceName.count <= 60,
               value.selected.count <= 50, Set(value.selected).count == value.selected.count,
               value.selected.allSatisfy({ !$0.isEmpty && $0.count <= 200 && value.projectIDs[$0] != nil }),
+              value.excluded.count <= 5_000, Set(value.excluded).count == value.excluded.count,
+              value.excluded.allSatisfy({ !$0.isEmpty && $0.count <= 200 }),
               value.projectIDs.count <= 5_000, value.projectIDs.values.allSatisfy({ UUID(uuidString: $0) != nil }) else { throw SnapshotFailure.invalid }
         return value
     }

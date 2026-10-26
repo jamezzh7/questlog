@@ -46,7 +46,7 @@ private struct PhoneHome: View {
                     Section {
                         Image(systemName: "laptopcomputer.and.iphone").font(.system(size: 40)).foregroundStyle(.tint).padding(.vertical, 8).accessibilityHidden(true)
                         Text(tr("Your Mac’s progress, here.", "在这里查看 Mac 项目进度", "L’avancement de votre Mac, ici.")).font(.title2.weight(.semibold))
-                        Text(tr("On your Mac, open Questlog → iPhone sync, choose projects and save. Sign in to the same iCloud account on both devices.", "在 Mac 打开 Questlog → iPhone 同步，选择项目并保存。两台设备需使用同一个 iCloud 账号。", "Sur le Mac, ouvrez Questlog → Synchronisation iPhone, choisissez des projets et enregistrez. Utilisez le même compte iCloud sur les deux appareils."))
+                        Text(tr("Connect a project in Questlog on your Mac. Its progress syncs here automatically when both devices use the same iCloud account.", "在 Mac 的 Questlog 中连接项目，进度就会自动同步到这里。两台设备使用同一个 iCloud 账号即可。", "Connectez un projet dans Questlog sur votre Mac. Son avancement apparaît ici automatiquement si les deux appareils utilisent le même compte iCloud."))
                             .font(.callout).foregroundStyle(.secondary)
                         Text(tr("The Mac must stay awake with Questlog running to send updates.", "Mac 需要保持唤醒且 Questlog 正在运行，才能发送新状态。", "Le Mac doit rester éveillé et Questlog ouvert pour envoyer les mises à jour.")).font(.footnote).foregroundStyle(.secondary)
                     }.listRowSeparator(.hidden)

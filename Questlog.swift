@@ -551,6 +551,10 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         if let config = settings["config"] {
             let publisher = MacPublisher(file: URL(fileURLWithPath: config).deletingLastPathComponent().appendingPathComponent("cloud-sync.json"))
             publisher.language = { [weak self] in self?.language.rawValue ?? "en" }
+            publisher.connectedProjects = {
+                struct Connections: Decodable { let projects: [ProjectChoice] }
+                return try JSONDecoder().decode(Connections.self, from: Data(contentsOf: URL(fileURLWithPath: config))).projects.map(\.id)
+            }
             publisher.read = { [weak self] ids, includeText, completion in self?.readSyncSnapshot(ids, includeText: includeText, completion: completion) }
             publisher.onChange = { [weak self] in self?.syncSettings?.updateStatus() }
             self.publisher = publisher; publisher.start()
@@ -565,7 +569,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         appMenu.addItem(withTitle: localized("显示进度条", "Show widget", "Afficher la mini-fenêtre"), action: #selector(showWidget), keyEquivalent: "0")
         appMenu.addItem(withTitle: localized("打开详情", "Open details", "Ouvrir les détails"), action: #selector(openDetails), keyEquivalent: "d")
         appMenu.addItem(withTitle: localized("刷新进度", "Refresh progress", "Actualiser l’avancement"), action: #selector(forceRefresh), keyEquivalent: "r")
-        appMenu.addItem(withTitle: localized("iPhone 同步…", "iPhone sync…", "Synchronisation iPhone…"), action: #selector(openSyncSettings), keyEquivalent: "")
+        appMenu.addItem(withTitle: localized("iCloud 同步…", "iCloud sync…", "Synchronisation iCloud…"), action: #selector(openSyncSettings), keyEquivalent: "")
         #if STORE_SCREENSHOTS
         appMenu.addItem(withTitle: "Save Store Screenshot", action: #selector(saveStoreScreenshot), keyEquivalent: "s")
         #endif
@@ -848,6 +852,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         if languagePreference != preference { languagePreference = preference; setupMenu() }
         updateNativeLabels()
         choices = response.projects
+        publisher?.tick()
         guard let project = response.project else {
             selectedID = nil
             displayedProjectID = nil

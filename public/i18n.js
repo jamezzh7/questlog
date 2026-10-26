@@ -1,7 +1,8 @@
 "use strict";
 (() => {
   const strings = {
-    cloudSettings: ["iPhone 同步…", "iPhone sync…", "Synchronisation iPhone…"],
+    cloudConnectionHint: ["iCloud 版默认将摘要自动同步到同一 iCloud 的 iPhone；可在 iCloud 同步中暂停或排除项目。原始文件留在 Mac。", "iCloud builds sync summaries automatically to an iPhone on the same iCloud account by default. You can stop sync or exclude projects in iCloud sync. Source files stay on the Mac.", "Les versions iCloud synchronisent automatiquement les résumés vers l’iPhone avec le même compte iCloud. Vous pouvez arrêter ou exclure des projets dans Synchronisation iCloud. Les fichiers restent sur le Mac."],
+    cloudSettings: ["iCloud 同步…", "iCloud sync…", "Synchronisation iCloud…"],
     editTracking: ["跟踪范围…", "Tracking scope…", "Périmètre du suivi…"],
     trackingMode: ["跟踪方式", "Track", "Mode de suivi"],
     trackingAuto: ["自动识别项目状态", "Detected project state", "État du projet détecté"],
@@ -42,7 +43,7 @@
     privacy: ["隐私政策", "Privacy policy", "Confidentialité"],
     accessRequired: ["需要目录授权", "Folder access required", "Autorisation du dossier requise"],
     privacyRead: ["Questlog 仅在本机读取你授权的项目清单、关联计划、项目说明和 Git 提交元数据。工具索引需另行授权；不读取聊天正文。", "Questlog reads authorized checklists, linked plans, project documents and Git commit metadata on this Mac. Tool indexes require a separate grant. Conversation transcripts are not read.", "Questlog lit sur ce Mac les listes, plans liés, documents et métadonnées Git autorisés. Les index des outils nécessitent une autorisation distincte. Les conversations ne sont pas lues."],
-    privacyStore: ["连接、工时、语言、外观及访问授权保存在应用沙盒内。可主动选择将项目摘要同步到自己的 iCloud 私有数据库；没有 Questlog 账号、分析、广告或模型调用。", "Connections, estimates, language, appearance and access grants stay in the app sandbox. Optional iPhone sync shares selected summaries through your private iCloud database. There is no Questlog account, analytics, advertising or model integration.", "Les connexions, estimations, langue, apparence et autorisations restent dans le bac à sable de l’app. Le partage facultatif avec l’iPhone utilise votre base iCloud privée. Aucun compte Questlog, outil d’analyse, publicité ou appel de modèle."],
+    privacyStore: ["连接、工时、语言、外观及访问授权保存在应用沙盒内。iCloud 版默认将已连接项目的摘要自动同步到自己的 iCloud 私有数据库，可暂停或排除项目；没有 Questlog 账号、分析、广告或模型调用。", "Connections, estimates, language, appearance and access grants stay in the app sandbox. In iCloud builds, connected project summaries sync automatically through your private iCloud database; you can stop sync or exclude projects. There is no Questlog account, analytics, advertising or model integration.", "Les connexions, estimations, langue, apparence et autorisations restent dans le bac à sable de l’app. Les résumés des projets connectés sont synchronisés automatiquement via votre base iCloud privée ; vous pouvez arrêter ou exclure des projets. Aucun compte Questlog, outil d’analyse, publicité ou appel de modèle."],
     privacyControl: ["可移除连接以删除其跟踪设置；在设置中重置文件权限可撤回全部目录和索引授权。原项目文件始终保留。完整政策在线提供，反馈请勿附带私人项目内容。", "Remove a connection to delete its tracking settings. Reset file permissions in Settings to revoke all folder and index grants. Project files are kept. A full policy is available online; omit private project content from support reports.", "Retirez une connexion pour supprimer ses réglages de suivi. Réinitialisez les autorisations dans Réglages pour révoquer l’accès aux dossiers et index. Les fichiers du projet sont conservés. La politique complète est en ligne ; excluez tout contenu privé des demandes d’aide."],
     privacyOnline: ["在线完整政策", "Full policy online", "Politique complète en ligne"],
     resetPermissions: ["重置文件访问权限…", "Reset file permissions…", "Réinitialiser les autorisations…"],
@@ -52,7 +53,7 @@
     appearanceSaved: ["已保存外观设置", "Appearance saved", "Apparence enregistrée"],
     settings: ["设置", "Settings", "Réglages"], resources: ["项目资料", "Project info", "Infos du projet"], backTasks: ["返回任务", "Back to tasks", "Retour aux tâches"],
     collapse: ["收起", "Collapse", "Réduire"], readOnly: ["只读", "Read only", "Lecture seule"], viewScope: ["查看范围", "View checklist", "Liste à afficher"],
-    currentStage: ["当前", "Current", "En cours"], localHelp: ["在本机读取项目文件。可在 iPhone 同步中选择是否分享摘要；不调用模型。", "Reads project files on this Mac. iPhone sync optionally shares selected summaries. No model calls.", "Lit les fichiers sur ce Mac. Le partage de résumés avec l’iPhone est facultatif. Aucun appel de modèle."],
+    currentStage: ["当前", "Current", "En cours"], localHelp: ["在本机读取项目文件，iCloud 版默认将摘要自动同步到同一 iCloud 的 iPhone。可在 iCloud 同步中暂停或排除项目；不调用模型。", "Reads project files on this Mac. iCloud builds sync summaries automatically to an iPhone on the same iCloud account by default. Stop sync or exclude projects in iCloud sync. No model calls.", "Lit les fichiers sur ce Mac et synchronise les résumés vers l’iPhone avec le même compte iCloud. Arrêtez ou excluez des projets dans Synchronisation iCloud. Aucun appel de modèle."],
     appTitle: ["Questlog · 项目进度伙伴", "Questlog · Project progress", "Questlog · Avancement du projet"],
     home: ["Questlog 首页", "Questlog home", "Accueil Questlog"], progressTitle: ["项目进度", "Project progress", "Avancement du projet"],
     expand: ["展开进度", "Open details", "Ouvrir les détails"], compact: ["收起为悬浮窗", "Back to widget", "Revenir à la mini-fenêtre"], quit: ["退出应用", "Quit Questlog", "Quitter Questlog"],

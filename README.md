@@ -18,13 +18,13 @@
 
 Questlog reads the task plans you already keep in your project. Glance at the native **300 × 120 pt** widget, open the details when you need context, then get back to building.
 
-No Questlog registration, API key, model calls, or third-party runtime packages. Source project files stay on your Mac; optional iCloud sync shares only selected summaries.
+No Questlog registration, API key, model calls, or third-party runtime packages. Source project files stay on your Mac; provisioned iCloud builds automatically sync connected project summaries.
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/details-dark.jpg"><img src="docs/images/details.jpg" width="1000" alt="Questlog's detail window showing modules and task states from the fictional Orbit project"></picture></p>
 
 Screenshots show the current native app with the fictional [Orbit example](examples/orbit/tasks.md). The previews below adapt to light or dark appearance; no personal project data is included.
 
-**Optional iPhone companion (Unreleased).** View selected Mac project summaries through your private iCloud account, with a read-only iPhone app and offline/stale labels. Provisioned builds are required; the local launcher remains available. [Setup and limits](docs/icloud-sync.md).
+**Optional iPhone companion (Unreleased).** Connected Mac project summaries sync automatically through your private iCloud account, with a read-only iPhone app and offline/stale labels. Provisioned builds are required; the local launcher remains available. [Setup and limits](docs/icloud-sync.md).
 
 ## Features
 
@@ -107,7 +107,7 @@ Module tasks preserve explicit source states such as in progress, delivered, def
 
 Questlog reads connected Markdown files and, while details are open, a bounded selection of project documents and recent Git metadata. Optional discovery reads local project-directory metadata from Codex or Claude Code. It does not read conversation transcripts or call their models.
 
-The app writes its own connection, language, appearance, scope, lightweight goal and estimate settings. It does not edit tracked projects or tool registries. The detail service binds to `127.0.0.1`, and the app includes no analytics or developer-operated backend. Optional iPhone sync sends selected summaries through your private iCloud database. [Read the privacy details](docs/privacy.md).
+The app writes its own connection, language, appearance, scope, lightweight goal and estimate settings. It does not edit tracked projects or tool registries. The detail service binds to `127.0.0.1`, and the app includes no analytics or developer-operated backend. Provisioned iCloud builds automatically send connected project summaries through your private iCloud database; you can stop sync or exclude projects. [Read the privacy details](docs/privacy.md).
 
 ## Shortcuts
 
