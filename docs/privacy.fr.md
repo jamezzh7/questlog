@@ -2,7 +2,7 @@
 
 Mise à jour : 25 octobre 2026. [English](privacy.md) · [简体中文](privacy.zh-CN.md)
 
-Questlog est maintenu par jamezzh7. L’app ne possède ni compte, ni outil d’analyse, ni publicité, ni intégration de modèle, ni serveur distant. Elle ne collecte et n’envoie aucune donnée au développeur.
+Questlog est maintenu par jamezzh7. L’app ne possède ni service d’inscription/mot de passe Questlog, ni analyse, publicité, intégration de modèle ou serveur exploité par le développeur. La version Unreleased ajoute un compagnon iPhone facultatif via iCloud, désactivé par défaut.
 
 Elle lit les listes Markdown connectées, les plans explicitement liés à l’intérieur du projet, les métadonnées nécessaires à l’actualisation et, dans la vue détaillée, une sélection limitée de documents et de métadonnées de commits Git. Elle ne lit pas les conversations. Le contexte est limité à quatre extraits, à 2 Mo par document et à 1 600 caractères par extrait. Tout contenu privé placé dans un document sélectionné peut apparaître dans l’interface.
 
@@ -10,9 +10,17 @@ La version Mac App Store demande de choisir un dossier dans la boîte de dialogu
 
 Les connexions, listes sélectionnées, périmètres, estimations, heures disponibles et préférences de langue et d’apparence, périmètres et objectifs simples restent sur le Mac. La version du store utilise son propre conteneur et un dossier QuestlogStore, avec les autorisations enregistrées séparément. La version installée depuis les sources utilise `~/Library/Application Support/Questlog/projects.json` ; le lanceur de développement utilise un fichier du dépôt. WebKit peut conserver des préférences de vue locales.
 
-Réglages → Réinitialiser les autorisations oublie tous les accès aux dossiers et index, puis cesse de les utiliser. Les connexions et estimations sont conservées ; il faut choisir de nouveau un dossier pour reprendre sa lecture. Retirer une connexion supprime ses réglages de suivi, en conservant les fichiers du projet. Les autres préférences locales restent jusqu’à leur suppression. Il n’existe aucune copie serveur ni compte distant à supprimer.
+Réglages → Réinitialiser les autorisations oublie tous les accès aux dossiers et index, puis cesse de les utiliser. Les connexions et estimations sont conservées ; il faut choisir de nouveau un dossier pour reprendre sa lecture. Retirer une connexion supprime ses réglages de suivi, en conservant les fichiers du projet. Les autres préférences locales restent jusqu’à leur suppression. L’usage local ne crée aucune copie cloud ; la conservation iCloud facultative est décrite ci-dessous.
 
 La version du store embarque son environnement et utilise une passerelle au sein du processus, sans serveur HTTP local. WebKit exige la capacité de connexion sortante de macOS pour lancer son moteur, mais la page intégrée bloque les requêtes et navigations distantes. La version depuis les sources lance un service sur `127.0.0.1` uniquement pour la vue détaillée, avec vérification de l’origine des écritures JSON.
+
+## Compagnon iCloud facultatif (Unreleased)
+
+Après activation et sélection explicite des projets, le Mac envoie des résumés dans **votre base CloudKit privée**, exploitée par Apple : identifiants aléatoires, nom choisi du Mac, noms des projets et périmètres sélectionnés, modes de suivi, statistiques, indicateur de conflit, pourcentages de périmètres définis et horodatage. Chemins locaux, documents sources, noms de fichiers/métadonnées de lignes, Git, autorisations, conversations et estimations sont exclus. Les textes d’état sont une option distincte, désactivée initialement et limitée à quatre courts champs par projet ; vérifiez leur confidentialité. Le masquage de chemins courants ne supprime pas tous les secrets possibles.
+
+Le Mac actualise environ chaque minute tant que Questlog fonctionne et qu’il reste éveillé, même sans fenêtre détaillée. L’iPhone utilise le même compte iCloud et environnement, et conserve une copie locale limitée après vérification de l’identité. Changer de compte efface les données du téléphone et suspend la publication du Mac jusqu’à réactivation. Aucun serveur du développeur ne reçoit ces instantanés. Les règles et conditions iCloud d’Apple s’appliquent.
+
+Enregistrer une nouvelle sélection retire les projets exclus au prochain envoi réussi. Sur le Mac d’origine, **Synchronisation iPhone → Arrêter et supprimer** efface son instantané cloud ; une suppression en échec reste en attente et sera réessayée. Gardez le Mac connecté jusqu’à confirmation. Quitter/désinstaller ne supprime pas les données cloud. Si le Mac ou ses réglages sont perdus, utilisez la gestion du stockage iCloud d’Apple. Les réglages iPhone permettent d’effacer la copie hors ligne, qu’une actualisation ultérieure peut recréer. Voir [configuration et limites](icloud-sync.md). La soumission locale existante est distincte de cette fonction Unreleased ; les déclarations de confidentialité devront être revues avant une future distribution cloud.
 
 Les liens vers la politique ou l’aide s’ouvrent dans le navigateur. GitHub traite ces visites selon sa propre politique. Les informations que vous soumettez volontairement dans une demande d’aide sont envoyées à GitHub ; les tickets publics sont visibles par tous. Excluez les projets privés, identifiants et captures non expurgées. Les services du store et les diagnostics système facultatifs relèvent séparément des politiques d’Apple.
 

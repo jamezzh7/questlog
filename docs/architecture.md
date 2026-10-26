@@ -5,6 +5,9 @@ Questlog has a native shell, a read-only Markdown adapter, and an on-demand loca
 | Component | Responsibility |
 | --- | --- |
 | `Questlog.swift` | AppKit widget, menus, window lifecycle, file metadata checks, WebKit details, native localization |
+| `remote_snapshot.py` | Selected-project allowlist, no network; text opt-in and no local path/source metadata fields |
+| `sync/` | Validated snapshot models, private CloudKit transport, independent Mac publisher and native sync settings |
+| `phone/` | Read-only SwiftUI iPhone client, account-bound offline cache and foreground refresh |
 | `read_summary.py` | One-shot widget summary, excluding Git; bounded document state when no plan exists |
 | `progress.py` | Main checklist parsing, scope, groups, progress, and explicit hour estimates |
 | `work_structure.py` | Bounded linked-plan parsing, module tasks, source states, and watched files |
@@ -35,3 +38,7 @@ The store target instead loads bundled files and forwards API calls through a ma
 A defined checklist scope, explicit main IDs or app-owned goals define the displayed percentage. Automatically detected partial plans show task counts without a percentage. Explicit document fields provide project state when no task structure exists. See [project state and scope](project-status.md). Linked module tasks retain explicit states and source attribution without inferred module percentages. Milestones, document sections, document excerpts, and Git activity provide context without silently changing the denominator.
 
 The app writes only its own configuration. Path confinement, bounded reads, inert text rendering, and same-origin JSON writes are implementation boundaries, rather than UI-only conventions.
+
+## Optional iCloud companion
+
+The local-only path remains the default. Provisioned Cloud configurations can publish selected project summaries once per minute independently of the detail view; the iPhone reads the private database using the same iCloud account and environment. Random remote IDs have no path meaning. One bounded JSON record per Mac is replaced atomically; paginated full queries replace the phone’s previous result and remove deleted snapshots. Status text has its own consent switch. Account changes disable publishing and clear phone state/navigation/cache. See [iCloud setup, schema and retention](icloud-sync.md).

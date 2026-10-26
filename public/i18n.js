@@ -1,6 +1,7 @@
 "use strict";
 (() => {
   const strings = {
+    cloudSettings: ["iPhone 同步…", "iPhone sync…", "Synchronisation iPhone…"],
     editTracking: ["跟踪范围…", "Tracking scope…", "Périmètre du suivi…"],
     trackingMode: ["跟踪方式", "Track", "Mode de suivi"],
     trackingAuto: ["自动识别项目状态", "Detected project state", "État du projet détecté"],
@@ -41,7 +42,7 @@
     privacy: ["隐私政策", "Privacy policy", "Confidentialité"],
     accessRequired: ["需要目录授权", "Folder access required", "Autorisation du dossier requise"],
     privacyRead: ["Questlog 仅在本机读取你授权的项目清单、关联计划、项目说明和 Git 提交元数据。工具索引需另行授权；不读取聊天正文。", "Questlog reads authorized checklists, linked plans, project documents and Git commit metadata on this Mac. Tool indexes require a separate grant. Conversation transcripts are not read.", "Questlog lit sur ce Mac les listes, plans liés, documents et métadonnées Git autorisés. Les index des outils nécessitent une autorisation distincte. Les conversations ne sont pas lues."],
-    privacyStore: ["连接、工时、语言、外观及访问授权保存在应用沙盒内。没有账户、分析、广告、模型调用或向开发者上传的数据。", "Connections, estimates, language, appearance and access grants stay in the app sandbox. There are no accounts, analytics, ads, model calls or data uploads to the developer.", "Les connexions, estimations, langue, apparence et autorisations restent dans le bac à sable de l’app. Aucun compte, outil d’analyse, publicité, appel de modèle ou envoi de données au développeur."],
+    privacyStore: ["连接、工时、语言、外观及访问授权保存在应用沙盒内。可主动选择将项目摘要同步到自己的 iCloud 私有数据库；没有 Questlog 账号、分析、广告或模型调用。", "Connections, estimates, language, appearance and access grants stay in the app sandbox. Optional iPhone sync shares selected summaries through your private iCloud database. There is no Questlog account, analytics, advertising or model integration.", "Les connexions, estimations, langue, apparence et autorisations restent dans le bac à sable de l’app. Le partage facultatif avec l’iPhone utilise votre base iCloud privée. Aucun compte Questlog, outil d’analyse, publicité ou appel de modèle."],
     privacyControl: ["可移除连接以删除其跟踪设置；在设置中重置文件权限可撤回全部目录和索引授权。原项目文件始终保留。完整政策在线提供，反馈请勿附带私人项目内容。", "Remove a connection to delete its tracking settings. Reset file permissions in Settings to revoke all folder and index grants. Project files are kept. A full policy is available online; omit private project content from support reports.", "Retirez une connexion pour supprimer ses réglages de suivi. Réinitialisez les autorisations dans Réglages pour révoquer l’accès aux dossiers et index. Les fichiers du projet sont conservés. La politique complète est en ligne ; excluez tout contenu privé des demandes d’aide."],
     privacyOnline: ["在线完整政策", "Full policy online", "Politique complète en ligne"],
     resetPermissions: ["重置文件访问权限…", "Reset file permissions…", "Réinitialiser les autorisations…"],
@@ -51,7 +52,7 @@
     appearanceSaved: ["已保存外观设置", "Appearance saved", "Apparence enregistrée"],
     settings: ["设置", "Settings", "Réglages"], resources: ["项目资料", "Project info", "Infos du projet"], backTasks: ["返回任务", "Back to tasks", "Retour aux tâches"],
     collapse: ["收起", "Collapse", "Réduire"], readOnly: ["只读", "Read only", "Lecture seule"], viewScope: ["查看范围", "View checklist", "Liste à afficher"],
-    currentStage: ["当前", "Current", "En cours"], localHelp: ["仅在本机读取项目文件，不调用模型或上传内容。", "Reads project files on this Mac. No model calls or uploads.", "Lit les fichiers de projet sur ce Mac, sans appel à un modèle ni envoi de données."],
+    currentStage: ["当前", "Current", "En cours"], localHelp: ["在本机读取项目文件。可在 iPhone 同步中选择是否分享摘要；不调用模型。", "Reads project files on this Mac. iPhone sync optionally shares selected summaries. No model calls.", "Lit les fichiers sur ce Mac. Le partage de résumés avec l’iPhone est facultatif. Aucun appel de modèle."],
     appTitle: ["Questlog · 项目进度伙伴", "Questlog · Project progress", "Questlog · Avancement du projet"],
     home: ["Questlog 首页", "Questlog home", "Accueil Questlog"], progressTitle: ["项目进度", "Project progress", "Avancement du projet"],
     expand: ["展开进度", "Open details", "Ouvrir les détails"], compact: ["收起为悬浮窗", "Back to widget", "Revenir à la mini-fenêtre"], quit: ["退出应用", "Quit Questlog", "Quitter Questlog"],
@@ -69,7 +70,7 @@
     removeTitle: ["移除项目连接？", "Remove project connection?", "Retirer la connexion au projet ?"], removeName: ["将“{name}”从 Questlog 移除。", "Remove “{name}” from Questlog.", "Retirer « {name} » de Questlog."],
     removeDescription: ["只移除本应用内的连接及工时等跟踪设置，项目目录和文件会保留。之后可以重新连接。", "This removes the connection and its tracking settings, including work estimates. Your project folder and files are kept. You can reconnect later.", "La connexion et ses réglages de suivi, dont les estimations de travail, seront retirés. Le dossier et les fichiers du projet sont conservés. Vous pourrez reconnecter le projet plus tard."],
     cancel: ["取消", "Cancel", "Annuler"], projectRemoved: ["已移除 {name} 的连接", "Removed {name} connection", "Connexion à {name} retirée"], emptyTitle: ["连接你的第一个项目", "Connect your first project", "Connectez votre premier projet"],
-    local: ["本地运行", "Local only", "Sur ce Mac"], reading: ["正在读取项目任务…", "Reading project tasks…", "Lecture des tâches du projet…"], overview: ["进度概览", "Progress overview", "Vue d’ensemble"],
+    local: ["本地运行", "On this Mac", "Sur ce Mac"], reading: ["正在读取项目任务…", "Reading project tasks…", "Lecture des tâches du projet…"], overview: ["进度概览", "Progress overview", "Vue d’ensemble"],
     projectContext: ["项目近况", "Project notes", "Notes du projet"], contextHint: ["摘自项目文档 · 保留原文", "Project document excerpts · original text", "Extraits des documents du projet · texte d’origine"],
     noContext: ["暂未发现项目说明或交接文档。可在项目根目录保存 README.md 或 PROJECT_HANDOFF.md。", "No project notes found. Add a README.md or PROJECT_HANDOFF.md in the project folder.", "Aucune note de projet trouvée. Ajoutez un fichier README.md ou PROJECT_HANDOFF.md dans le dossier du projet."],
     readDocument: ["阅读原文", "Read document", "Lire le document"], documentReadOnly: ["只读预览 · 内容来自本机项目文件", "Read-only preview · from a local project file", "Aperçu en lecture seule · fichier local du projet"],

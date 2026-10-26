@@ -438,6 +438,8 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     var overviewKeyMonitor: Any?
     var detailsReady = false
     var pendingDetailsRoute: [String]?
+    var publisher: MacPublisher?
+    var syncSettings: SyncSettingsWindow?
     #if APP_STORE
     var storeRuntime: StoreRuntime?
     #endif
@@ -546,6 +548,13 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         refreshSummary(force: true)
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.refreshSummary() }
         timer?.tolerance = 1
+        if let config = settings["config"] {
+            let publisher = MacPublisher(file: URL(fileURLWithPath: config).deletingLastPathComponent().appendingPathComponent("cloud-sync.json"))
+            publisher.language = { [weak self] in self?.language.rawValue ?? "en" }
+            publisher.read = { [weak self] ids, includeText, completion in self?.readSyncSnapshot(ids, includeText: includeText, completion: completion) }
+            publisher.onChange = { [weak self] in self?.syncSettings?.updateStatus() }
+            self.publisher = publisher; publisher.start()
+        }
     }
     func setupMenu() {
         let menu = NSMenu()
@@ -556,6 +565,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         appMenu.addItem(withTitle: localized("显示进度条", "Show widget", "Afficher la mini-fenêtre"), action: #selector(showWidget), keyEquivalent: "0")
         appMenu.addItem(withTitle: localized("打开详情", "Open details", "Ouvrir les détails"), action: #selector(openDetails), keyEquivalent: "d")
         appMenu.addItem(withTitle: localized("刷新进度", "Refresh progress", "Actualiser l’avancement"), action: #selector(forceRefresh), keyEquivalent: "r")
+        appMenu.addItem(withTitle: localized("iPhone 同步…", "iPhone sync…", "Synchronisation iPhone…"), action: #selector(openSyncSettings), keyEquivalent: "")
         #if STORE_SCREENSHOTS
         appMenu.addItem(withTitle: "Save Store Screenshot", action: #selector(saveStoreScreenshot), keyEquivalent: "s")
         #endif
@@ -579,6 +589,24 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         updateNativeLabels()
     }
     @objc func forceRefresh() { refreshSummary(force: true); if projectPopover.isShown { refreshProjectOverview() } }
+    @objc func openSyncSettings() {
+        guard let publisher, let config = settings["config"] else { return }
+        struct Connections: Decodable { let projects: [ProjectChoice] }
+        let choices = (try? JSONDecoder().decode(Connections.self, from: Data(contentsOf: URL(fileURLWithPath: config))).projects) ?? []
+        syncSettings?.close()
+        syncSettings = SyncSettingsWindow(owner: self, publisher: publisher, choices: choices)
+        syncSettings?.showWindow(nil); NSApp.activate(ignoringOtherApps: true)
+    }
+    func readSyncSnapshot(_ ids: [String], includeText: Bool, completion: @escaping (Result<Data, Error>) -> Void) {
+        #if APP_STORE
+        var components = URLComponents(); components.path = "/api/sync-snapshot"
+        components.queryItems = ids.map { URLQueryItem(name: "project", value: $0) } + [URLQueryItem(name: "text", value: includeText ? "1" : "0")]
+        storeRuntime?.readNativeData(components.string!, completion: completion)
+        #else
+        let arguments = ["--sync"] + ids.flatMap { ["--sync-project", $0] } + (includeText ? ["--include-text"] : [])
+        runSummaryBridge(arguments, completion: completion)
+        #endif
+    }
     func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
@@ -1061,6 +1089,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
         if action == "quit" { NSApp.terminate(nil) }
         else if action == "details-ready" { detailsReady = true; deliverDetailsRoute() }
         else if action == "compact" { showWidget() }
+        else if action == "cloud-settings" { openSyncSettings() }
         else if action.hasPrefix("language:") { refreshSummary(force: true) }
         else if action.hasPrefix("appearance:") {
             let preference = String(action.dropFirst("appearance:".count))
@@ -1083,7 +1112,7 @@ final class CompanionApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKS
     }
     @objc func quit() { NSApp.terminate(nil) }
     func applicationWillTerminate(_ notification: Notification) {
-        exiting = true; timer?.invalidate(); overviewTimer?.invalidate(); projectPopover.performClose(nil); stopDetails()
+        exiting = true; publisher?.stop(); syncSettings?.close(); timer?.invalidate(); overviewTimer?.invalidate(); projectPopover.performClose(nil); stopDetails()
         if let item = statusItem { NSStatusBar.system.removeStatusItem(item) }
     }
     func showFailure(_ message: String) {

@@ -2,7 +2,7 @@
 
 Last updated: October 25, 2026. [简体中文](privacy.zh-CN.md) · [Français](privacy.fr.md)
 
-Questlog has no account system, analytics, model integration, or remote backend. This describes the app; README badge images are separately requested by your browser when viewing the repository.
+Questlog has no registration/password service, analytics, advertising, model integration or developer-operated backend. Unreleased builds add optional iCloud sync to a read-only iPhone companion; it is off by default. This describes the app; README badge images are separately requested by your browser when viewing the repository.
 
 ## What Questlog reads
 
@@ -28,9 +28,17 @@ Removing a connection removes its Questlog tracking settings, without removing t
 
 The store build reads project files only after you choose a project folder in the macOS system dialog. Optional Codex or Claude Code discovery requires a separate, explicitly selected registry JSON file. Selecting an index does not authorize the project folders listed in it. All grants are read-only and can persist across launches through security-scoped bookmarks.
 
-Settings → Reset file permissions forgets all saved folder and registry grants and stops their active access. Connections and estimates remain, and reading a project again requires a new folder selection. Remove a connection to delete its associated tracking settings. Neither action modifies the original project or tool registry. Local settings and web preferences remain until you remove them; Questlog has no server copy, account or remote deletion process.
+Settings → Reset file permissions forgets all saved folder and registry grants and stops their active access. Connections and estimates remain, and reading a project again requires a new folder selection. Remove a connection to delete its associated tracking settings. Neither action modifies the original project or tool registry. Local settings and web preferences remain until you remove them. Local-only use creates no cloud copy. Optional iCloud data and its removal are described below.
 
-The store build embeds its runtime and uses an in-process bridge. It does not run a local HTTP server. WebKit requires macOS's outgoing network capability to start its renderer; the bundled page blocks remote requests and navigation. Questlog does not upload project files, paths, usage events or identifiers to the developer, and includes no analytics, advertising or model SDK. Its privacy declaration is “Data Not Collected.”
+The store build embeds its runtime and uses an in-process bridge. It does not run a local HTTP server. WebKit requires macOS's outgoing network capability to start its renderer; the bundled page blocks remote requests and navigation. Questlog does not upload project files, paths, usage events or identifiers to the developer, and includes no analytics, advertising or model SDK. The existing local-only store submission is separate from this Unreleased feature; any future cloud-enabled submission must review its privacy disclosures before release.
+
+## Optional iCloud companion (Unreleased)
+
+Only after you enable sync and select projects, the native Mac publisher sends allowlisted snapshots to **your private CloudKit database** operated by Apple. A snapshot contains random device/project IDs, a chosen Mac label, selected project and scope names, tracking modes, counts, a source-conflict flag, optional scoped percentages and a capture timestamp. No local path fields, source files, filenames/line metadata, Git history, access bookmarks, conversations or estimates are included. Status prose is a separate, initially off option, limited to four short fields per project; it can contain confidential content and needs your review. Common inline-path redaction does not guarantee removal of secrets from prose.
+
+The publisher refreshes about once per minute while Questlog is running and the Mac is awake, independently of the detail window. The phone reads snapshots with the same iCloud account and environment, and keeps a bounded local cache after verifying the account identity. Account changes clear phone data and stop Mac publishing until re-enabled. The developer has no app server receiving these snapshots. Apple's iCloud terms and storage rules apply.
+
+Save a changed selection to remove unselected projects from the next cloud snapshot. On the originating Mac, choose **iPhone sync → Stop and remove** to delete its record. Failed deletion is retained locally and retried; keep the Mac online until confirmed. Quitting or uninstalling does not remove the cloud record. If the Mac/settings are lost, use Apple's app-specific iCloud storage controls. On iPhone, Settings can clear the offline copy; subsequent successful refreshes may create a new cache. See [setup, limits and retention](icloud-sync.md).
 
 ## Local HTTP service in source builds
 

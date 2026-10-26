@@ -18,11 +18,13 @@
 
 Questlog 读取项目里已有的任务文档。平时只占一个 **300 × 120 pt** 的原生小窗，需要时展开详情，查看任务和项目资料。
 
-无需账户、API Key、模型调用或第三方运行包。项目内容留在你的 Mac 上。
+无需注册 Questlog、API Key、模型调用或第三方运行包。原始项目文件留在 Mac；可主动选择通过 iCloud 分享摘要。
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/details-dark.jpg"><img src="docs/images/details.jpg" width="1000" alt="详情窗口按模块展示 Orbit 示例项目的任务及状态"></picture></p>
 
 截图来自当前原生应用，使用虚构的 [Orbit 示例](examples/orbit/tasks.md)。下方预览随浅色或深色外观显示对应截图，不包含个人项目资料。
+
+**可选 iPhone 伴侣（Unreleased）**：通过自己的 iCloud 查看所选 Mac 项目摘要，支持只读详情、离线副本与旧快照提示。需要配置签名的双端构建，普通本地启动器仍可使用。[配置与限制](docs/icloud-sync.md)。
 
 ## 功能
 

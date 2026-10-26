@@ -54,6 +54,8 @@ python3 -m py_compile discovery.py progress.py project_context.py work_structure
 
 Native changes also require a Swift build and actual app verification. Check source selection, language changes, project switching, keyboard navigation, and collapse/quit lifecycle as relevant to the change. UI screenshots should use fictional data.
 
+The optional iPhone companion and provisioned Mac CloudKit configurations are described in [iCloud sync](icloud-sync.md). Run `sh scripts/check_sync.sh` for injected transport, cache/account, deletion retry and payload checks without contacting iCloud. The standard `build_app.py` bundle remains a local build without CloudKit entitlements.
+
 Keep generated test bundles out of normal application search results. After native QA, quit the test app, unregister its exact bundle path if registered, and remove the reproducible test bundle or archive it as ZIP. Keep the installed daily-use app intact.
 
 ## Assets

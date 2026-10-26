@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 from progress import get_progress, parse_tasks, read_document, source_path
 from discovery import connect_discovered, discover_projects, find_task_files, primary_ids
 from read_summary import load_summary, load_project_overview
+from remote_snapshot import load_sync_snapshot
 
 LOCK = threading.RLock()
 
@@ -97,6 +98,8 @@ class LocalAPI:
             return 422, {"error": str(error)}
 
     def read(self, config, endpoint, query):
+        if endpoint == "/api/sync-snapshot":
+            return load_sync_snapshot(self.config_path, query.get("project", []), query.get("text", ["0"])[0] == "1", authorize=self.authorize)
         if endpoint == "/api/preferences":
             return {"language": config.get("language", "auto"), "appearance": config.get("appearance", "auto")}
         if endpoint == "/api/projects":

@@ -167,6 +167,7 @@ $("#reset-permissions").addEventListener("click", async () => {
 });
 if (nativeAPI) { $("#privacy").hidden = false; $("#reset-permissions").hidden = false; }
 $("#settings").addEventListener("click", (event) => showDialog($("#settings-dialog"), event.currentTarget));
+$("#cloud-settings").addEventListener("click", () => nativeAction("cloud-settings"));
 function setResourceView(show, focus = false) {
   viewScroll[resourceView ? "resources" : "tasks"] = $("main").scrollTop;
   resourceView = show;

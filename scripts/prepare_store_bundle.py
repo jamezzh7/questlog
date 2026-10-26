@@ -13,7 +13,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parent.parent
 MACHO = {b'\xcf\xfa\xed\xfe', b'\xce\xfa\xed\xfe', b'\xfe\xed\xfa\xcf', b'\xfe\xed\xfa\xce', b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf'}
-MODULES = ('progress.py', 'work_structure.py', 'discovery.py', 'project_context.py', 'project_status.py', 'read_summary.py', 'api_service.py', 'store_api.py', 'git_metadata.py')
+MODULES = ('progress.py', 'work_structure.py', 'discovery.py', 'project_context.py', 'project_status.py', 'remote_snapshot.py', 'read_summary.py', 'api_service.py', 'store_api.py', 'git_metadata.py')
 
 
 def run(*args):

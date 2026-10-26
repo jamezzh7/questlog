@@ -166,7 +166,7 @@ final class StoreRuntime: NSObject, WKScriptMessageHandlerWithReply, WKNavigatio
     func projectOverview(completion: @escaping (Result<Data, Error>) -> Void) {
         readNativeData("/api/project-overview", completion: completion)
     }
-    private func readNativeData(_ path: String, completion: @escaping (Result<Data, Error>) -> Void) {
+    func readNativeData(_ path: String, completion: @escaping (Result<Data, Error>) -> Void) {
         request(path) { result in
             completion(result.flatMap { response in
                 do {

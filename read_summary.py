@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from progress import get_progress
+from remote_snapshot import load_sync_snapshot
 
 
 def load_project_overview(config_path, authorize=None):
@@ -50,9 +51,12 @@ if __name__ == "__main__":
     parser.add_argument("--config", required=True)
     parser.add_argument("--project")
     parser.add_argument("--overview", action="store_true")
+    parser.add_argument("--sync", action="store_true")
+    parser.add_argument("--sync-project", action="append", default=[])
+    parser.add_argument("--include-text", action="store_true")
     args = parser.parse_args()
     try:
-        result = load_project_overview(args.config) if args.overview else load_summary(args.config, args.project)
+        result = load_sync_snapshot(args.config, args.sync_project, args.include_text) if args.sync else load_project_overview(args.config) if args.overview else load_summary(args.config, args.project)
         print(json.dumps(result, ensure_ascii=False))
     except (OSError, ValueError, KeyError) as error:
         print(json.dumps({"error": str(error)}, ensure_ascii=False))

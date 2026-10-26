@@ -1,0 +1,23 @@
+# Design
+
+Mac's bounded local reader → allowlisted snapshot → CloudKit private custom zone → read-only SwiftUI iPhone app. Both applications use `iCloud.com.jamezzh7.questlog`. Separate CloudDebug/CloudRelease configurations opt into capabilities; the existing local build remains usable without them.
+
+One `QuestlogDeviceSnapshot` record per random Mac identifier contains a versioned JSON payload, bounded to 50 projects and 400 KB. Replacing this record atomically removes unselected projects. Each project has a locally persisted random UUID unrelated to its path. A custom private zone and paginated full-snapshot queries use a queryable index on recordName. Only the owning Mac writes/deletes its record. No public database, web server, analytics or third-party SDK is used.
+
+Sync settings are stored separately beside the existing configuration, written atomically with private permissions. A single publisher serializes reads, uploads and deletion; preference generations prevent obsolete reads from being published, and pending updates follow any in-flight upload. CloudKit retry-after and bounded exponential backoff avoid request loops. A failed upload does not advance the last-success timestamp. Account changes disable publishing and clear phone caches.
+
+The phone checks the iCloud identity before loading its account-bound cache, fetches when active, refreshes about once per minute and supports pull-to-refresh. Each Mac's capture time is distinct from the phone's last successful fetch. Snapshots older than three minutes are marked stale; no claim that an offline Mac is still running is made. A missing zone means no shared projects. Malformed, oversized or unsupported records produce a visible failure rather than a falsely fresh result.
+
+## Interface specification
+
+Purpose: choose which Mac projects can be viewed on the phone, and make freshness and progress scope understandable at a glance.
+
+Aesthetic direction: utilitarian, extending Questlog's approved flat visual system. Light paper `#FBFBFB`, ink `#242424`, accent `#4A61A8`; dark surface `#242424`, ink `#EDEDED`. Typography uses the existing macOS system font and native iOS San Francisco, overriding generic web-font guidance to preserve platform accessibility and Dynamic Type. SF Symbols supply icons. No decorative gradients or new branding.
+
+Mac: existing Settings entry and app menu open a native sync window, with status, device label, enable checkbox, independent status-text checkbox, project checkboxes, save/refresh and stop/remove controls. Phone: leading-aligned navigation list grouped by Mac; rows show names and scoped progress or task/status counts. Detail uses native sections for scope, counts, optional current/blocker/next text and timestamps. Standard native layout overrides creative asymmetric web-layout guidance because this is a compact companion utility.
+
+## Verification
+
+Python tests cover selection boundaries, allowlisted keys, opt-in text, read failures, permission revocation and progress modes. Swift tests cover strict payload validation, opaque IDs, stale states and preference persistence. Build the legacy Mac app, sandbox Mac configurations and iOS simulator/device targets. Exercise the real phone UI with explicitly labeled fictional preview data; preview mode cannot contact CloudKit. Real two-device CloudKit acceptance requires provisioned capabilities and the same iCloud account, and is reported separately.
+
+Live validation found repeated timeouts on the zone-change endpoint while record lookup/query requests worked. The reader uses paginated snapshot queries instead; recordName QUERYABLE is part of setup and must be deployed with the schema.
