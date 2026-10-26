@@ -70,7 +70,7 @@ def status_value(raw):
         return "blocked"
     if re.search(r"可开始|ready(?: to (?:start|begin))?\b", value, re.I):
         return "ready"
-    if re.search(r"阻断|依赖|(?:^|[;；，,])\s*依\S|需用户|需.*(?:决定|授权|操作)|blocked|waiting|awaiting|depends|needs? user", value, re.I):
+    if re.search(r"阻断|阻塞|受阻|依赖|(?:^|[;；，,])\s*依\S|需用户|需.*(?:决定|授权|操作)|blocked|waiting|awaiting|depends|needs? user", value, re.I):
         return "blocked"
     return "pending"
 

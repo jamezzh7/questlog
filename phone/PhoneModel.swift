@@ -93,9 +93,10 @@ private struct PhoneCache: Codable {
         try? FileManager.default.removeItem(at: cache)
     }
     #if DEBUG
-    func showPreview(_ snapshots: [DeviceSnapshot]) {
+    func showPreview(_ snapshots: [DeviceSnapshot], cached: Bool = false) {
         guard preview else { return }
-        self.snapshots = snapshots; lastFetch = Date()
+        self.snapshots = snapshots; lastFetch = Date(); self.cached = cached
+        message = cached ? cloudText("Offline preview · showing a saved copy.", "离线预览 · 正在显示保存的副本。", "Aperçu hors ligne · copie enregistrée.") : ""
     }
     #endif
 }

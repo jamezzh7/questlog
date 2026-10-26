@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep the adopted iPhone UI while counting projects consistently, showing structured activity/blockers without shared prose, distinguishing capture freshness from cached data and clock skew, and explaining unsigned simulator builds without a CloudKit crash. Update automatic-sync instructions in all three languages.
+
+- Redesign the iPhone companion with cards, an overview row, per-Mac capture/stale indicators, animated progress rings for defined scopes, a segmented bar for observed tasks, a detail hero with stat tiles and a status timeline; add staggered reveals, zoom navigation on iOS 18+, loading placeholders and pull-to-refresh in place of the refresh button. Motion follows Reduce Motion.
 - Automatically sync connected Mac project summaries to the same iCloud account without a separate setup step; retain exclusions, explicit stop, stable cloud identities and an independent status-text opt-in.
 - Add Mac → private iCloud snapshots and a read-only iPhone companion with scoped progress, foreground refresh, account-bound offline caching and stale-data labels. Share connected, non-excluded projects; status prose is a separate opt-in. CloudKit requires provisioned builds and matching environments; see `docs/icloud-sync.md`.
 - Add independent Mac publishing, opaque remote identifiers, durable stop/remove retries and account-change handling; keep the existing local launcher available without cloud capabilities.

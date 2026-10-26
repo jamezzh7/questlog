@@ -58,6 +58,31 @@ actor FakeCloud: SnapshotCloud {
         let future = DeviceSnapshot(version: 2, id: snapshot.id, name: snapshot.name, capturedAt: Date(), projects: [])
         try expect((try? future.encoded()) == nil, "Unsupported version rejected")
 
+        // Additive metadata remains compatible with version-1 snapshots and caches.
+        let activity = SnapshotActivity(active: true, blocked: true)
+        let flagged = SnapshotProject(id: UUID().uuidString, name: "Beacon", state: "ready", mode: "status", scope: "", counts: SnapshotCounts(done: 0, total: 0, active: 0, blocked: 0, pending: 0, unknown: 0), percent: nil, signals: [], needsReview: false, activity: activity)
+        try expect(flagged.valid && flagged.inProgress && flagged.blocked && flagged.needsAttention, "Status flags work without any shared prose")
+        let newSnapshot = DeviceSnapshot(version: 1, id: snapshot.id, name: snapshot.name, capturedAt: snapshot.capturedAt, projects: [flagged])
+        let newDecoded = try DeviceSnapshot.decode(newSnapshot.encoded())
+        try expect(newDecoded.projects[0].activity == activity, "Structured flags survive the payload round trip")
+        var oldJSON = try JSONSerialization.jsonObject(with: newSnapshot.encoded()) as! [String: Any]
+        var oldProjects = oldJSON["projects"] as! [[String: Any]]; oldProjects[0].removeValue(forKey: "activity"); oldJSON["projects"] = oldProjects
+        let oldDecoded = try DeviceSnapshot.decode(JSONSerialization.data(withJSONObject: oldJSON))
+        try expect(oldDecoded.projects[0].activity == nil && !oldDecoded.projects[0].inProgress, "Old version-1 payloads decode with unknown activity")
+        oldProjects[0]["activity"] = ["active": "true", "blocked": true]; oldJSON["projects"] = oldProjects
+        try expect((try? DeviceSnapshot.decode(JSONSerialization.data(withJSONObject: oldJSON))) == nil, "Activity flags must be booleans")
+        let manyTasks = SnapshotProject(id: UUID().uuidString, name: "Many tasks", state: "ready", mode: "tasks", scope: "", counts: SnapshotCounts(done: 1, total: 10, active: 8, blocked: 1, pending: 0, unknown: 0), percent: nil, signals: [], needsReview: false)
+        let overview = SnapshotOverview([DeviceSnapshot(version: 1, id: snapshot.id, name: snapshot.name, capturedAt: Date(), projects: [manyTasks, flagged])])
+        try expect(overview.projects == 2 && overview.inProgress == 2 && overview.attention == 2, "All overview statistics count projects, with active and blocked allowed to overlap")
+        let unreadable = SnapshotProject(id: UUID().uuidString, name: "Gone", state: "permission", mode: "unknown", scope: "", counts: nil, percent: nil, signals: [], needsReview: false)
+        try expect(unreadable.valid && !unreadable.inProgress && unreadable.needsAttention, "Revoked sources cannot appear active")
+        try expect(snapshot.freshness(cached: false, at: snapshot.capturedAt) == .recent, "Fresh capture is recent")
+        try expect(snapshot.freshness(cached: true, at: snapshot.capturedAt) == .cached, "Recent cached data never receives the recent indicator")
+        try expect(snapshot.freshness(cached: false, at: snapshot.capturedAt.addingTimeInterval(181)) == .stale, "Old capture is stale")
+        try expect(snapshot.freshness(cached: true, at: snapshot.capturedAt.addingTimeInterval(-61)) == .clockSkew, "Future timestamps require a clock check even when cached")
+        try expect(!CloudKitTransport.cloudEnabled("NO") && !CloudKitTransport.cloudEnabled("$(CODE_SIGNING_ALLOWED)") && !CloudKitTransport.cloudEnabled(nil), "Unsigned and unresolved build metadata fail closed")
+        try expect(CloudKitTransport.cloudEnabled("YES") && CloudKitTransport.cloudEnabled(true), "Signed and legacy build flags are accepted")
+
         let prefsFile = directory.appendingPathComponent("sync.json")
         var preferences = try SyncPreferences.read(prefsFile)
         try expect(preferences.enabled && preferences.automaticProjects && !FileManager.default.fileExists(atPath: prefsFile.path), "Automatic sync by default, no write before connecting")
@@ -174,7 +199,7 @@ actor FakeCloud: SnapshotCloud {
         var reads = 0
         publisher.read = { _, _, completion in
             reads += 1
-            var local = project; local.id = "local-id"
+            var local = flagged; local.id = "local-id"
             completion(Result { try JSONEncoder().encode(["projects": [local]]) })
         }
         publisher.start()
@@ -186,6 +211,7 @@ actor FakeCloud: SnapshotCloud {
         let uploaded = await fake.values
         try expect(uploaded.count == 1 && uploaded[0].projects[0].id != "local-id", "Publisher replaces local IDs")
         try expect(UUID(uuidString: uploaded[0].projects[0].id) != nil, "Publisher IDs are UUIDs")
+        try expect(uploaded[0].projects[0].activity == activity, "Publisher preserves structured activity when replacing local IDs")
 
         await fake.setFailing(true)
         try publisher.save(enabled: false, name: "Test Mac", selected: [], includeText: false)

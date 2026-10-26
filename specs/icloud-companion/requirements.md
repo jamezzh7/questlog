@@ -14,3 +14,12 @@ The approved first version connects a running Mac to a read-only iPhone app thro
 Developer provisioning, schema deployment and installation are validated separately from local builds. App Store submissions and listing/review assets are outside this change.
 
 Upgrade acceptance: retain existing device/project UUIDs, account binding, status-text choice, explicit disabled state and previously unselected connections as exclusions. New connections auto-join. Signing into iCloud for the first time retries automatically; repeated notifications for the same account continue syncing, while switching a previously bound account still pauses for review.
+
+
+## Adopted iPhone UI completion
+
+9. The existing card layout, typography, colors and navigation shall remain. All three overview metrics shall count projects; multiple active tasks in one project shall contribute one active project. Active and attention may overlap.
+10. The Mac shall share bounded boolean active/blocker observations independently of opt-in prose. Explicit status, current work and task state are evidence; none is live job telemetry. The phone shall recognize blockers with prose disabled, and old version-1 payloads without flags shall remain readable.
+11. The phone shall distinguish recent capture, offline copy, stale capture and future clock skew. Cached data shall not receive the recent indicator. The indicator shall describe capture freshness rather than Mac online presence.
+12. An unsigned iPhone simulator build shall explain that iCloud is disabled instead of initializing CloudKit and crashing. Signed device builds shall retain CloudKit. Preview data and offline/no-text QA variants shall remain Debug-only and network-isolated.
+13. All three interface languages shall describe automatic connected-project sync and independent text sharing consistently.

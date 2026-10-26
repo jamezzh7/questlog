@@ -12,3 +12,11 @@
 - [x] 7. Default provisioned builds to automatic connected-project sync; preserve identity, exclusions, explicit stop and account boundaries during migration. (R1–5)
 - [x] 8. Simplify Mac and iPhone instructions and disclose automatic summary sharing at connection time. (R1–2, R6)
 - [x] 9. Verify automatic first upload, connection changes, exclusions, pause/restart, builds and installed daily app; sync ordinary source and documentation publicly. (R1–8)
+
+
+## Keep the adopted UI and complete its behavior
+
+- [x] 10. Share structured activity/blocker flags independently of prose and retain version-1 compatibility. (R10)
+- [x] 11. Use project-level overview metrics and shared freshness/cache/clock rules without redesigning cards. (R9, R11)
+- [x] 12. Keep unsigned simulator builds out of CloudKit and update automatic-sync instructions in three languages. (R12–13)
+- [x] 13. Verify privacy, old/new snapshots, simulator scenarios, signed device/Mac builds and actual deployment; sync ordinary source publicly. (R9–13)

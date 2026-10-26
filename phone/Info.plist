@@ -27,7 +27,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>QuestlogCloudEnabled</key>
-	<true/>
+	<string>$(CODE_SIGNING_ALLOWED)</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

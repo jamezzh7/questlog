@@ -11,7 +11,12 @@ enum CloudFailure: LocalizedError, Equatable {
     func message(language: String = Locale.preferredLanguages.first ?? "en") -> String {
         func text(_ en: String, _ zh: String, _ fr: String) -> String { cloudText(en, zh, fr, language: language) }
         switch self {
-        case .build: return text("iCloud sync requires a signed build with the Questlog CloudKit capability. See docs/icloud-sync.md.", "iCloud 同步需要带 Questlog CloudKit 权限的签名构建，配置方法见 docs/icloud-sync.md。", "La synchronisation iCloud nécessite une version signée avec la capacité CloudKit de Questlog. Voir docs/icloud-sync.md.")
+        case .build:
+            #if os(iOS)
+            return text("This build cannot connect to iCloud. Use an iCloud-enabled Questlog build on your iPhone.", "此构建未启用 iCloud。请在 iPhone 使用支持 iCloud 的 Questlog 版本。", "Cette version ne peut pas accéder à iCloud. Utilisez une version de Questlog compatible avec iCloud sur votre iPhone.")
+            #else
+            return text("iCloud sync requires a signed build with the Questlog CloudKit capability. See docs/icloud-sync.md.", "iCloud 同步需要带 Questlog CloudKit 权限的签名构建，配置方法见 docs/icloud-sync.md。", "La synchronisation iCloud nécessite une version signée avec la capacité CloudKit de Questlog. Voir docs/icloud-sync.md.")
+            #endif
         case .noAccount: return text("Sign in to iCloud in system settings on both devices.", "请在两台设备的系统设置中登录同一个 iCloud 账号。", "Connectez les deux appareils au même compte iCloud dans les réglages système.")
         case .restricted: return text("iCloud access is restricted on this device.", "这台设备的 iCloud 访问受到限制。", "L’accès à iCloud est restreint sur cet appareil.")
         case .temporary: return text("iCloud is temporarily unavailable. Your local projects are unaffected.", "iCloud 暂时不可用，本地项目不受影响。", "iCloud est temporairement indisponible. Vos projets locaux restent accessibles.")
@@ -29,6 +34,10 @@ protocol SnapshotCloud: AnyObject {
 
 actor CloudKitTransport: SnapshotCloud {
     static let containerID = "iCloud.com.jamezzh7.questlog"
+    static func cloudEnabled(_ value: Any?) -> Bool {
+        if let value = value as? String { return value == "YES" }
+        return value as? Bool == true
+    }
     static var supported: Bool {
         #if os(macOS)
         guard let task = SecTaskCreateFromSelf(nil),
@@ -36,7 +45,7 @@ actor CloudKitTransport: SnapshotCloud {
               let containers = SecTaskCopyValueForEntitlement(task, "com.apple.developer.icloud-container-identifiers" as CFString, nil) as? [String] else { return false }
         return services.contains("CloudKit") && containers.contains(containerID)
         #else
-        return Bundle.main.object(forInfoDictionaryKey: "QuestlogCloudEnabled") as? Bool == true
+        return cloudEnabled(Bundle.main.object(forInfoDictionaryKey: "QuestlogCloudEnabled"))
         #endif
     }
     private let zoneID = CKRecordZone.ID(zoneName: "QuestlogSnapshots", ownerName: CKCurrentUserDefaultName)

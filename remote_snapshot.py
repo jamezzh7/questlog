@@ -8,6 +8,19 @@ from progress import get_progress
 MAX_PROJECTS = 50
 
 
+def activity_flags(tracking):
+    """Publish observed state separately from prose, without inferring job telemetry."""
+    from work_structure import status_value
+    counts = tracking["counts"]
+    signals = tracking.get("signals", [])
+    states = [status_value(s["text"]) for s in signals if s["kind"] == "state"]
+    active = counts["active"] > 0
+    if not tracking.get("conflicts"):
+        active |= "in_progress" in states if states else any(s["kind"] == "current" for s in signals)
+    blocked = counts["blocked"] > 0 or any(s["kind"] == "blocker" for s in signals) or any(s in {"blocked", "dependency"} for s in states)
+    return {"active": bool(active), "blocked": bool(blocked)}
+
+
 def display_text(value, limit):
     text = " ".join(str(value or "").split())
     # Prose remains opt-in: it may contain confidential content even after redaction.
@@ -25,7 +38,7 @@ def load_sync_snapshot(config_path, project_ids, include_text=False, authorize=N
         if project["id"] not in wanted:
             continue
         row = {"id": project["id"], "name": display_text(project["name"], 100),
-               "state": "unavailable", "mode": "unknown", "scope": "", "counts": None, "percent": None, "signals": [], "needsReview": False}
+               "state": "unavailable", "mode": "unknown", "scope": "", "counts": None, "percent": None, "signals": [], "needsReview": False, "activity": None}
         try:
             if authorize:
                 authorize(project["root"])
@@ -34,7 +47,7 @@ def load_sync_snapshot(config_path, project_ids, include_text=False, authorize=N
             counts = {key: tracking["counts"][key] for key in ("done", "total", "active", "blocked", "pending", "unknown")}
             row.update(state="ready", mode=tracking["mode"], counts=counts,
                        scope=display_text(tracking.get("title"), 100) if tracking["mode"] == "measured" else "",
-                       needsReview=bool(tracking.get("conflicts")))
+                       needsReview=bool(tracking.get("conflicts")), activity=activity_flags(tracking))
             if tracking["mode"] == "measured" and progress["overall"]["total"]:
                 row["percent"] = progress["overall"]["percent"]
             if include_text:

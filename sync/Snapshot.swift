@@ -10,15 +10,28 @@ struct SnapshotSignal: Codable, Equatable {
     let kind: String; let text: String
     var valid: Bool { ["current", "blocker", "next", "delivery", "status"].contains(kind) && text.count <= 240 }
 }
+struct SnapshotActivity: Codable, Equatable {
+    let active: Bool
+    let blocked: Bool
+}
 struct SnapshotProject: Codable, Equatable, Identifiable {
     var id: String
     let name: String; let state: String; let mode: String; let scope: String
     let counts: SnapshotCounts?; let percent: Int?; let signals: [SnapshotSignal]; let needsReview: Bool
+    // Optional for version-1 snapshots written before structured activity existed.
+    let activity: SnapshotActivity?
+    init(id: String, name: String, state: String, mode: String, scope: String, counts: SnapshotCounts?, percent: Int?, signals: [SnapshotSignal], needsReview: Bool, activity: SnapshotActivity? = nil) {
+        self.id = id; self.name = name; self.state = state; self.mode = mode; self.scope = scope
+        self.counts = counts; self.percent = percent; self.signals = signals; self.needsReview = needsReview; self.activity = activity
+    }
+    var inProgress: Bool { state == "ready" && ((counts?.active ?? 0) > 0 || activity?.active == true) }
+    var blocked: Bool { state == "ready" && ((counts?.blocked ?? 0) > 0 || activity?.blocked == true || signals.contains { $0.kind == "blocker" }) }
+    var needsAttention: Bool { state != "ready" || needsReview || blocked }
     var valid: Bool {
         guard UUID(uuidString: id) != nil, !name.isEmpty, name.count <= 100, scope.count <= 100,
               ["ready", "unavailable", "permission"].contains(state), ["measured", "tasks", "status", "unknown"].contains(mode),
               signals.count <= 4, signals.allSatisfy(\.valid) else { return false }
-        if state != "ready" { return counts == nil && percent == nil && signals.isEmpty }
+        if state != "ready" { return counts == nil && percent == nil && signals.isEmpty && activity == nil }
         guard let counts, counts.valid else { return false }
         if let percent {
             guard mode == "measured", counts.total > 0, (0...100).contains(percent),
@@ -27,6 +40,15 @@ struct SnapshotProject: Codable, Equatable, Identifiable {
         return mode != "measured" || counts.total == 0 || percent != nil
     }
 }
+struct SnapshotOverview: Equatable {
+    let projects: Int; let inProgress: Int; let attention: Int
+    init(_ snapshots: [DeviceSnapshot]) {
+        let all = snapshots.flatMap(\.projects)
+        projects = all.count; inProgress = all.filter(\.inProgress).count; attention = all.filter(\.needsAttention).count
+    }
+}
+
+enum SnapshotFreshness: Equatable { case recent, cached, stale, clockSkew }
 struct DeviceSnapshot: Codable, Equatable, Identifiable {
     let version: Int
     let id: String; let name: String; let capturedAt: Date; let projects: [SnapshotProject]
@@ -52,6 +74,11 @@ struct DeviceSnapshot: Codable, Equatable, Identifiable {
     func stale(at date: Date = Date()) -> Bool {
         let age = date.timeIntervalSince(capturedAt)
         return age > 180 || age < -60
+    }
+    func freshness(cached: Bool, at date: Date = Date()) -> SnapshotFreshness {
+        if date.timeIntervalSince(capturedAt) < -60 { return .clockSkew }
+        if cached { return .cached }
+        return stale(at: date) ? .stale : .recent
     }
 }
 

@@ -32,7 +32,7 @@ class RemoteSnapshotTests(unittest.TestCase):
     def test_only_whitelisted_fields_are_exported_and_config_is_unchanged(self):
         before = self.config.read_bytes()
         row = load_sync_snapshot(self.config, ['local-id'])['projects'][0]
-        self.assertEqual(set(row), {'id','name','state','mode','scope','counts','percent','signals','needsReview'})
+        self.assertEqual(set(row), {'id','name','state','mode','scope','counts','percent','signals','needsReview','activity'})
         self.assertEqual(row['mode'], 'measured'); self.assertEqual(row['percent'], 50)
         encoded = json.dumps(row)
         self.assertNotIn(str(self.root), encoded)
@@ -56,6 +56,7 @@ class RemoteSnapshotTests(unittest.TestCase):
         row = load_sync_snapshot(self.config, ['local-id'])['projects'][0]
         self.assertEqual(row['mode'], 'status'); self.assertEqual(row['signals'], []); self.assertIsNone(row['percent'])
         self.assertNotIn('Validating', json.dumps(row))
+        self.assertEqual(row['activity'], {'active': True, 'blocked': True})
 
     def test_opted_in_text_omits_attribution_paths_and_redacts_inline_paths(self):
         self.status_project()
@@ -69,12 +70,43 @@ class RemoteSnapshotTests(unittest.TestCase):
         (self.root / 'STATUS.md').write_text('# Current\nProject status: In progress\n')
         row = load_sync_snapshot(self.config, ['local-id'], True)['projects'][0]
         self.assertEqual(row['signals'][0]['kind'], 'status')
+        without_text = load_sync_snapshot(self.config, ['local-id'])['projects'][0]
+        self.assertEqual(without_text['activity'], {'active': True, 'blocked': False})
+        self.assertEqual(without_text['signals'], [])
+
+    def test_completed_status_overrides_an_old_current_field(self):
+        self.status_project()
+        (self.root / 'STATUS.md').write_text('# Current\nProject status: Done\nCurrent: Previous work\nBlocker: None\n')
+        row = load_sync_snapshot(self.config, ['local-id'])['projects'][0]
+        self.assertEqual(row['activity'], {'active': False, 'blocked': False})
+        self.assertEqual(row['signals'], [])
+
+    def test_explicit_blocked_state_is_shared_without_its_text(self):
+        self.status_project()
+        (self.root / 'STATUS.md').write_text('# Current\nProject status: Blocked waiting for confidential review\n')
+        row = load_sync_snapshot(self.config, ['local-id'])['projects'][0]
+        self.assertEqual(row['activity'], {'active': False, 'blocked': True})
+        self.assertNotIn('confidential', json.dumps(row))
+
+    def test_chinese_blocked_state_is_shared_without_its_text(self):
+        self.status_project()
+        (self.root / 'STATUS.md').write_text('# Current\n项目状态：阻塞，等待评审\n')
+        row = load_sync_snapshot(self.config, ['local-id'])['projects'][0]
+        self.assertEqual(row['activity'], {'active': False, 'blocked': True})
+        self.assertEqual(row['signals'], [])
+
+    def test_conflicting_status_does_not_claim_active(self):
+        self.status_project()
+        (self.root / 'STATUS.md').write_text('# Current\nProject status: In progress\nProject status: Done\nCurrent: Previous work\n')
+        row = load_sync_snapshot(self.config, ['local-id'])['projects'][0]
+        self.assertTrue(row['needsReview'])
+        self.assertFalse(row['activity']['active'])
 
     def test_revocation_replaces_previous_counts_and_never_reads_files(self):
         with patch('remote_snapshot.get_progress', side_effect=AssertionError('ungranted read')):
             status, body = LocalAPI(self.config, authorized_roots=[]).request('GET', '/api/sync-snapshot?project=local-id&text=1')
         self.assertEqual(status, 200); row = body['projects'][0]
-        self.assertEqual(row['state'], 'permission'); self.assertIsNone(row['counts']); self.assertIsNone(row['percent']); self.assertEqual(row['signals'], [])
+        self.assertIsNone(row['activity']); self.assertEqual(row['state'], 'permission'); self.assertIsNone(row['counts']); self.assertIsNone(row['percent']); self.assertEqual(row['signals'], [])
 
     def test_unreadable_project_does_not_retain_progress(self):
         (self.root / 'tasks.md').unlink()

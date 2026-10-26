@@ -26,7 +26,7 @@ final class SyncSettingsWindow: NSWindowController {
         enabled.state = publisher.preferences.enabled ? .on : .off
         enabled.isEnabled = publisher.supported
         stack.addArrangedSubview(enabled)
-        stack.addArrangedSubview(label(owner.localized("连接项目后，同一 iCloud 的 iPhone 会自动看到进度，无需配对。只同步名称、范围与统计；原始文件留在 Mac。", "Connect a project and see its progress on an iPhone using the same iCloud account. No pairing needed. Only names, scopes and counts sync; source files stay on the Mac.", "Connectez un projet : son avancement apparaît sur l’iPhone avec le même compte iCloud, sans jumelage. Seuls les noms, périmètres et statistiques sont partagés ; les fichiers restent sur le Mac.")))
+        stack.addArrangedSubview(label(owner.localized("连接项目后，同一 iCloud 的 iPhone 会自动看到进度，无需配对。只同步名称、范围、统计与状态标记；原始文件留在 Mac。", "Connect a project and see its progress on an iPhone using the same iCloud account. No pairing needed. Only names, scopes, counts and state flags sync; source files stay on the Mac.", "Connectez un projet : son avancement apparaît sur l’iPhone avec le même compte iCloud, sans jumelage. Seuls les noms, périmètres, statistiques et indicateurs d’état sont partagés ; les fichiers restent sur le Mac.")))
         let nameLabel = label(owner.localized("Mac 显示名称（可选更改）", "Mac display name (optional to change)", "Nom du Mac (modification facultative)")); stack.addArrangedSubview(nameLabel)
         deviceName.stringValue = publisher.preferences.deviceName; deviceName.setAccessibilityLabel(nameLabel.stringValue)
         stack.addArrangedSubview(deviceName); deviceName.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true

@@ -23,3 +23,12 @@ Mac: connecting a project explains that summaries sync automatically to the same
 Python tests cover selection boundaries, allowlisted keys, opt-in text, read failures, permission revocation and progress modes. Swift tests cover strict payload validation, opaque IDs, stale states and preference persistence. Build the legacy Mac app, sandbox Mac configurations and iOS simulator/device targets. Exercise the real phone UI with explicitly labeled fictional preview data; preview mode cannot contact CloudKit. Real two-device CloudKit acceptance requires provisioned capabilities and the same iCloud account, and is reported separately.
 
 Live validation found repeated timeouts on the zone-change endpoint while record lookup/query requests worked. The reader uses paginated snapshot queries instead; recordName QUERYABLE is part of setup and must be deployed with the schema.
+
+
+## iPhone presentation completion
+
+Version 1 gains an optional `activity` object with boolean `active` and `blocked`. New publishers derive it from bounded task counts and explicit document evidence before optional prose is removed. Unreadable records omit it. Existing clients ignore it; new clients accept old records/caches and fall back to counts and shared blocker signals. No CloudKit schema migration is required because the payload remains a Bytes field. No new file data or project text is transmitted.
+
+`SnapshotOverview` counts projects for every metric. A project can have active work and a blocker simultaneously. `DeviceSnapshot.freshness` is shared by the header and detail: future clock skew, saved cache, stale and recent are distinct. The existing indicator becomes a static capture indicator; cached data is neutral. Card composition and navigation remain as adopted.
+
+The phone Info.plist expands `CODE_SIGNING_ALLOWED` into its CloudKit intent flag. Unsigned builds fail closed before CKContainer construction; signed builds retain their existing capability configuration. This does not replace provisioning validation. See Apple's [build settings reference](https://developer.apple.com/documentation/xcode/build-settings-reference). Debug-only preview variants exercise hidden prose and cached presentation without touching iCloud.

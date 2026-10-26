@@ -11,11 +11,13 @@ The optional iCloud companion is under **Unreleased**. It adds a read-only iPhon
 
 Only a confirmed tracking scope has a percentage. Incomplete plans show detected task counts and unknown coverage; state-only projects show their mode and, if enabled separately, short current/blocker/next excerpts. A snapshot is not a live job execution measurement. Jobs must update their plan/status evidence for Questlog to observe changes.
 
-Each Mac shows its **capture time**. The phone separately shows its **last successful fetch time**. Snapshots over three minutes old, or with suspicious future clock times, are marked old. Refreshing the phone does not make an old Mac snapshot fresh. Failed or revoked project reads replace previous counts with an unavailable/permission state.
+The overview counts projects for all three metrics: total, projects with observed active work, and projects needing attention (blocked, source conflict or unreadable). A project may appear in both active and attention. Active status is based on task/document evidence, not process monitoring. Structured active/blocker flags are shared even when status prose is off, so a blocked state-only project is still visible. Old snapshots without flags remain readable.
+
+Each Mac shows its **capture time**. The phone separately shows its **last successful fetch time**. Snapshots over three minutes old, or with suspicious future clock times, are marked old. The indicator describes recent capture, not Mac online presence; offline copies stay neutral, and future clock skew has its own warning. Refreshing the phone does not make an old Mac snapshot fresh. Failed or revoked project reads replace previous counts with an unavailable/permission state.
 
 ## Data and deletion
 
-The private CloudKit database receives a random Mac identifier, a Mac display label, random project identifiers, connected, non-excluded project names, scope names, tracking modes, counts, optional scoped percentages, a source-conflict flag and capture time. **Share status text** is a separate, initially off option, limited to four short fields per project. Review text for confidential content before enabling it; common path redaction cannot remove arbitrary secrets from prose.
+The private CloudKit database receives a random Mac identifier, a Mac display label, random project identifiers, connected, non-excluded project names, scope names, tracking modes, counts, boolean active/blocker observations, optional scoped percentages, a source-conflict flag and capture time. **Share status text** is a separate, initially off option, limited to four short fields per project. Review text for confidential content before enabling it; common path redaction cannot remove arbitrary secrets from prose.
 
 Local configuration, source documents, file path fields, source filenames/line metadata, Git history, directory bookmarks, transcripts and estimates are not part of the upload. No account/password service, public CloudKit database or developer-operated relay is used. Local HTTP endpoints remain loopback-only; the phone never accesses them.
 
@@ -53,7 +55,9 @@ sh scripts/check_sync.sh
 python3 -m unittest discover -s tests -v
 ```
 
-Debug iPhone builds accept `--preview` for explicitly labeled fictional examples. Preview mode makes no CloudKit requests. Release builds do not include the preview data/launch handling.
+Unsigned iPhone builds set the iCloud flag to NO from CODE_SIGNING_ALLOWED and show an explanation on normal launch, without constructing CKContainer. Signed device builds set it to YES and still require valid capabilities.
+
+Debug iPhone builds accept `--preview` for explicitly labeled fictional examples. Use `--preview-no-text` to verify blocker flags without excerpts and `--preview-offline` for cached presentation; both remain network-isolated. Preview mode makes no CloudKit requests. Release builds do not include the preview data/launch handling.
 
 Development schema: custom private zone `QuestlogSnapshots`, record type `QuestlogDeviceSnapshot`, field `payload` of type **Bytes**. One version-1 JSON record (at most 400 KB) per Mac; up to 50 projects per record. Paginated queries require a **QUERYABLE index on recordName** for QuestlogDeviceSnapshot. In CloudKit Console → Development → Indexes, create an index such as recordNameQueryable, type QUERYABLE, field recordName. No payload index is required; full-result replacement removes deleted snapshots. The phone accepts at most 100 Macs and 4 MB of combined payloads. In Development, the first successful upload creates the schema; it can also be prepared in CloudKit Console. Before distributing Production builds, deploy the tested schema through Apple's console and verify both clients in Production. Do not reset the environment or deploy untested changes to resolve a transient error.
 
